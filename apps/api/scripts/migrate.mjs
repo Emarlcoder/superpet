@@ -5,7 +5,9 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { store, taxonomies } from '../dist/db/schema.js';
 if (existsSync('.env')) loadEnvFile('.env');
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL required');
-const { db, pool } = connectDatabase(process.env.DATABASE_URL);
+const { db, pool } = connectDatabase(
+  process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL,
+);
 try {
   await migrate(db, { migrationsFolder: './drizzle' });
   await db
