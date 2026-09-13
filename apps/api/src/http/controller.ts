@@ -319,7 +319,8 @@ export class CommerceController {
     @Body() body: unknown,
   ) {
     v.id.parse(id);
-    action = req.path.split('/').at(-1)!;
+    const pathParts = req.path.split('/');
+    action = pathParts[pathParts.length - 1]!;
     z.enum(['publish', 'archive', 'draft']).parse(action);
     const input = z.strictObject({ expectedVersion: v.version }).parse(body);
     return this.command(
@@ -1029,3 +1030,4 @@ export class CommerceController {
     });
   }
 }
+
