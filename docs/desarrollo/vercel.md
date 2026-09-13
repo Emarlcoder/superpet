@@ -40,3 +40,5 @@ Sesión Vercel iniciada mediante GitHub en emarlcoders-projects; plan Hobby conf
 - https://vercel.com/docs/plans/hobby
 
 
+
+Deployment trigger: latest Vercel build includes the shared contracts and Helmet TypeScript fixes.
