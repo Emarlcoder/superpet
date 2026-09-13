@@ -10,7 +10,11 @@ import { Auth } from './domain/auth.js';
 import { CommerceController } from './http/controller.js';
 import { ErrorFilter } from './http/error-filter.js';
 import helmet from 'helmet';
-const helmetMiddleware = helmet as unknown as (options: object) => unknown;
+const helmetMiddleware = (typeof helmet === 'function'
+  ? helmet
+  : (helmet as unknown as { default: (options: object) => unknown }).default) as (
+  options: object,
+) => unknown;
 import { MediaController, MediaGuard } from './http/media.js';
 
 export async function createApp(config: ApiConfig) {
