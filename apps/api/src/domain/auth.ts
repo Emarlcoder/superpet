@@ -82,7 +82,7 @@ export async function passwordVerify(encoded: string, value: string) {
 }
 export function passwordPolicy(value: string, username = '') {
   ensure(
-    [...value].length >= 15 &&
+    [...value].length >= 8 &&
       [...value].length <= 128 &&
       Buffer.byteLength(value) <= 512,
     'PASSWORD_POLICY_VIOLATION',

@@ -11,7 +11,8 @@ afterEach(() => {
 });
 describe('Password boundaries and bounded email adapter', () => {
   it('accepts Unicode and spaces exactly, rejects invalid length and common passwords', async () => {
-    expect(() => passwordPolicy('a'.repeat(14))).toThrow();
+    expect(() => passwordPolicy('a'.repeat(7))).toThrow();
+    expect(() => passwordPolicy('a'.repeat(8))).not.toThrow();
     expect(() => passwordPolicy('a'.repeat(129))).toThrow();
     expect(() => passwordPolicy('passwordpassword')).toThrow();
     const phrase = '  Frase 🐾 única de prueba  ';
