@@ -27,3 +27,4 @@ allowBuilds:
   '@embedded-postgres/windows-x64': true
   argon2: true
   esbuild: true
+  '@embedded-postgres/linux-x64': true
