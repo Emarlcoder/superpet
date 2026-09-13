@@ -1,0 +1,13 @@
+node_modules/
+.pnpm-store/
+.next/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+.engram/
+playwright-report/
+test-results/
+.local/

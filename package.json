@@ -1,0 +1,27 @@
+{
+  "name": "superpet",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
+  "scripts": {
+    "db:local": "pnpm --filter @superpet/api db:local",
+    "db:migrate": "pnpm --filter @superpet/api db:migrate",
+    "admin:local": "pnpm --filter @superpet/api admin:local",
+    "dev": "pnpm --filter @superpet/contracts build && pnpm --parallel --filter @superpet/api --filter @superpet/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm --filter @superpet/contracts build && pnpm -r typecheck",
+    "lint": "oxlint apps packages && prettier --check \"apps/**/*.{ts,tsx,mjs,json,css}\" \"packages/**/*.{ts,json}\" package.json pnpm-workspace.yaml",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,mjs,json,css}\" \"packages/**/*.{ts,json}\" package.json pnpm-workspace.yaml",
+    "test": "pnpm --filter @superpet/contracts build && pnpm --filter @superpet/api test",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "oxlint": "1.82.0",
+    "prettier": "3.9.6",
+    "typescript": "6.0.3"
+  }
+}

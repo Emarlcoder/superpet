@@ -1,0 +1,45 @@
+{
+  "name": "@superpet/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file-if-exists=.env dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "pnpm build && vitest run",
+    "db:local": "node scripts/local-db.mjs",
+    "db:migrate": "pnpm build && node scripts/migrate.mjs",
+    "admin:local": "pnpm build && node scripts/admin.mjs",
+    "admin:provision": "node scripts/provision-admin.mjs",
+    "maintenance": "node scripts/maintenance.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1129.0",
+    "@nestjs/common": "12.0.1",
+    "@nestjs/core": "12.0.1",
+    "@nestjs/platform-express": "12.0.1",
+    "@superpet/contracts": "workspace:*",
+    "argon2": "0.45.1",
+    "drizzle-orm": "0.45.2",
+    "express": "5.2.1",
+    "helmet": "8.3.0",
+    "multer": "2.3.0",
+    "pg": "8.23.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "sharp": "0.35.4",
+    "zod": "4.6.0"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "12.0.0",
+    "@types/express": "5.0.6",
+    "@types/multer": "2.2.0",
+    "@types/pg": "8.23.1",
+    "drizzle-kit": "0.31.10",
+    "embedded-postgres": "18.4.0-beta.17",
+    "vite": "8.2.2",
+    "vitest": "5.0.0"
+  }
+}
