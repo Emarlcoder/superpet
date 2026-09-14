@@ -818,29 +818,6 @@ function CatalogAdmin({
           <Field name="name" label="Nombre" />
           <button>Crear</button>
         </Form>
-        {tax.map((t) => (
-          <p key={t.id}>
-            {t.name}{' '}
-            <button
-              className="secondary"
-              onClick={() =>
-                act(() =>
-                  run(
-                    '/admin/taxonomies/' + t.id,
-                    {
-                      name: t.name,
-                      active: !t.active,
-                      expectedVersion: t.version,
-                    },
-                    'PATCH',
-                  ),
-                )
-              }
-            >
-              {t.active ? 'Desactivar' : 'Activar'}
-            </button>
-          </p>
-        ))}
       </details>
     </>
   );
