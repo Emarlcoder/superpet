@@ -1,5 +1,4 @@
-export const API =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+export const API = '/api/v1';
 export type Variant = { key: string; width: number; height: number };
 export type Sku = {
   id: string;
@@ -129,7 +128,7 @@ const messages: Record<string, string> = {
     'Agregá al menos una presentación activa y una foto antes de publicar.',
   STORE_NOT_CONFIGURED: 'El local todavía no configuró su número de WhatsApp.',
   PASSWORD_POLICY_VIOLATION:
-    'Usá una contraseña de 15 a 128 caracteres que no sea común.',
+    'Usá una contraseña de 8 a 128 caracteres que no sea común.',
   CORRECTION_AFTER_RETURN:
     'Esta venta ya tiene devoluciones: solo se puede corregir el precio.',
   RECOVERY_REVIEW_REQUIRED:
@@ -152,7 +151,20 @@ export async function api<T>(
     },
   });
   if (response.status === 204) return undefined as T;
-  const result = await response.json();
+  let result;
+  try {
+    if (!response.headers.get('content-type')?.includes('application/json'))
+      throw new Error('Unexpected content type');
+    result = await response.json();
+    if (result === null || typeof result !== 'object')
+      throw new Error('Unexpected response');
+  } catch {
+    throw new ApiError(
+      'API_UNAVAILABLE',
+      response.status,
+      'No pudimos conectar con el servicio. Intentá nuevamente en unos minutos.',
+    );
+  }
   if (!response.ok)
     throw new ApiError(
       result.code ?? 'REQUEST_FAILED',

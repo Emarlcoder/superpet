@@ -10,11 +10,11 @@ import { Auth } from './domain/auth.js';
 import { CommerceController } from './http/controller.js';
 import { ErrorFilter } from './http/error-filter.js';
 import helmet from 'helmet';
-const helmetMiddleware = (typeof helmet === 'function'
-  ? helmet
-  : (helmet as unknown as { default: (options: object) => unknown }).default) as (
-  options: object,
-) => unknown;
+const helmetMiddleware = (
+  typeof helmet === 'function'
+    ? helmet
+    : (helmet as unknown as { default: (options: object) => unknown }).default
+) as (options: object) => unknown;
 import { MediaController, MediaGuard } from './http/media.js';
 
 export async function createApp(config: ApiConfig) {
@@ -64,7 +64,9 @@ export async function createApp(config: ApiConfig) {
     bodyParser: false,
   });
   const express = await import('express');
-  app.use(helmetMiddleware({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  app.use(
+    helmetMiddleware({ crossOriginResourcePolicy: { policy: 'cross-origin' } }),
+  );
   app.use(express.default.json({ limit: '64kb' }));
   app.use(
     (
@@ -77,7 +79,7 @@ export async function createApp(config: ApiConfig) {
     },
   );
   app.useGlobalFilters(new ErrorFilter());
-  app.setGlobalPrefix(API_PREFIX);
+  app.setGlobalPrefix('/' + API_PREFIX);
   app.enableCors({
     origin: config.webOrigin,
     credentials: true,
@@ -93,4 +95,3 @@ export async function createApp(config: ApiConfig) {
   app.enableShutdownHooks();
   return app;
 }
-

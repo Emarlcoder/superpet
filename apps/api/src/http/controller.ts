@@ -153,6 +153,12 @@ export class CommerceController {
   ) {
     return this.auth.preSession(req, res);
   }
+  @Post('auth/csrf') @HttpCode(200) createPreSession(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.auth.preSession(req, res);
+  }
   @Post('auth/login') @HttpCode(200) login(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
@@ -1030,4 +1036,3 @@ export class CommerceController {
     });
   }
 }
-

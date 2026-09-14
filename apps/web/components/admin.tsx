@@ -109,7 +109,7 @@ function NewPassword({ name = 'password' }: { name?: string }) {
   return (
     <>
       <label>
-        Nueva contraseña (15–128 caracteres)
+        Nueva contraseña (8–128 caracteres)
         <input
           name={name}
           type={visible ? 'text' : 'password'}
@@ -321,7 +321,9 @@ export function Admin() {
             setBusy(true);
             setError('');
             try {
-              const csrf = await api<{ csrfToken: string }>('/auth/csrf');
+              const csrf = await api<{ csrfToken: string }>('/auth/csrf', {
+                method: 'POST',
+              });
               await api('/auth/login', {
                 method: 'POST',
                 headers: { 'X-CSRF-Token': csrf.csrfToken },
@@ -441,7 +443,7 @@ export function Admin() {
             <>
               <h1 className="page-title">Cambiar contraseña</h1>
               <p>
-                Usá una frase de 15 a 128 caracteres. Después deberás iniciar
+                Usá una frase de 8 a 128 caracteres. Después deberás iniciar
                 sesión nuevamente.
               </p>
               <Form
@@ -1943,7 +1945,9 @@ export function Recovery({
           try {
             if (reset && value(f, 'password') !== value(f, 'passwordConfirm'))
               throw new Error('Las contraseñas no coinciden.');
-            const csrf = await api<{ csrfToken: string }>('/auth/csrf');
+            const csrf = await api<{ csrfToken: string }>('/auth/csrf', {
+              method: 'POST',
+            });
             const result = await api<{ message?: string }>(
               verifyEmail
                 ? '/auth/email/verify'

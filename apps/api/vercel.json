@@ -1,3 +1,9 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index.ts" }]
+  "framework": null,
+  "functions": {
+    "api/index.mjs": {
+      "includeFiles": "data/common-passwords.sha256"
+    }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/index.mjs" }]
 }
