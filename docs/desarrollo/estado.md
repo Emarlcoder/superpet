@@ -3,6 +3,7 @@
 ## Ajustes administrativos — 2026-09-14
 
 - El producto genera su URL desde el nombre al crearse: minúsculas sin tildes y palabras separadas por guiones. Colisiones resueltas con sufijos numéricos mediante la restricción única de PostgreSQL, incluso con creaciones simultáneas. Editar el nombre sin enviar slug conserva los enlaces existentes. El panel ya no pide identificador de URL; API mantiene slug opcional por compatibilidad.
+- Marcas y categorías también generan el identificador desde el nombre, con sufijos para duplicados dentro de cada tipo. El formulario solo solicita tipo y nombre; la API mantiene el identificador opcional para clientes anteriores.
 - Sesión administrativa sin cierre por duración o inactividad, conforme a la solicitud del usuario. Mantiene cierre manual, revocación por cambio de contraseña, cookie segura y CSRF. Presesiones y recuperación sí vencen; ver autenticacion.md.
 
 ## Implementación local — 2026-09-10

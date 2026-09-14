@@ -266,6 +266,29 @@ describe.skipIf(!connectionString)(
       expect(edited.status).toBe(200);
       expect(edited.body.slug).toBe(results[0].body.slug);
     });
+    it('generates taxonomy identifiers per kind with concurrent duplicates and replay', async () => {
+      const headers = () => ({
+        'X-CSRF-Token': csrf,
+        'Idempotency-Key': randomUUID(),
+        'X-Operation-Epoch': epoch,
+      });
+      for (const kind of ['brand', 'category']) {
+        const input = { kind, name: 'Nutrición especial' };
+        const firstHeaders = headers();
+        const results = await Promise.all([
+          request('/admin/taxonomies', input, firstHeaders),
+          request('/admin/taxonomies', input, headers()),
+        ]);
+        expect(results.map((r) => r.status)).toEqual([201, 201]);
+        expect(results.map((r) => r.body.slug).sort()).toEqual([
+          'nutricion-especial',
+          'nutricion-especial-2',
+        ]);
+        expect(
+          (await request('/admin/taxonomies', input, firstHeaders)).body.id,
+        ).toBe(results[0].body.id);
+      }
+    });
     it('expired anonymous presessions still cannot log in', async () => {
       const raw = randomBytes(32).toString('base64url');
       const expiredCsrf = randomBytes(32).toString('base64url');

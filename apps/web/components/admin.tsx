@@ -804,7 +804,6 @@ function CatalogAdmin({
               run('/admin/taxonomies', {
                 kind: value(f, 'kind'),
                 name: value(f, 'name'),
-                slug: value(f, 'slug'),
               }),
             )
           }
@@ -817,7 +816,6 @@ function CatalogAdmin({
             </select>
           </label>
           <Field name="name" label="Nombre" />
-          <Field name="slug" label="Identificador" />
           <button>Crear</button>
         </Form>
         {tax.map((t) => (

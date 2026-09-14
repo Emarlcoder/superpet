@@ -491,7 +491,8 @@ export class CommerceController {
         slug: z
           .string()
           .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
-          .max(160),
+          .max(160)
+          .optional(),
       })
       .parse(body);
     return this.command(
@@ -499,8 +500,32 @@ export class CommerceController {
       res,
       'taxonomy.create',
       input,
-      async (tx) =>
-        (await tx.insert(s.taxonomies).values(input).returning())[0],
+      async (tx) => {
+        if (input.slug)
+          return (
+            await tx
+              .insert(s.taxonomies)
+              .values({ ...input, slug: input.slug })
+              .returning()
+          )[0];
+        for (let sequence = 1; ; sequence++) {
+          const [created] = await tx
+            .insert(s.taxonomies)
+            .values({
+              ...input,
+              slug: productSlug(
+                input.name,
+                sequence,
+                input.kind === 'brand' ? 'marca' : 'categoria',
+              ),
+            })
+            .onConflictDoNothing({
+              target: [s.taxonomies.kind, s.taxonomies.slug],
+            })
+            .returning();
+          if (created) return created;
+        }
+      },
       true,
       true,
     );
