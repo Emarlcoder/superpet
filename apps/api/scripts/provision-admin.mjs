@@ -72,7 +72,7 @@ try {
     adminId = existing.id;
   } else {
     const password = await askSecret(
-      'Contraseña nueva (oculta, 15–128 caracteres): ',
+      'Contraseña nueva (oculta, 8–128 caracteres): ',
     );
     if (password !== (await askSecret('Repetir contraseña (oculta): ')))
       throw new Error('Las contraseñas no coinciden.');
