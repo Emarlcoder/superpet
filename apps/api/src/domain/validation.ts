@@ -39,7 +39,8 @@ export const productInput = z.strictObject({
   slug: z
     .string()
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
-    .max(160),
+    .max(160)
+    .optional(),
   description: z.string().max(10000),
   categoryId: id,
   brandId: id.nullable(),

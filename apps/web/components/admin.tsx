@@ -192,23 +192,8 @@ export function Admin() {
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState('');
   const pending = useRef(new Map<string, string>());
-  const [remaining, setRemaining] = useState(1800000);
   useEffect(() => {
     if (!session) return;
-    const timer = setInterval(() => {
-      const left =
-        Math.min(
-          Date.parse(session.expiresAt),
-          Date.parse(session.lastActivityAt) + 1800000,
-        ) - Date.now();
-      setRemaining(left);
-      if (left <= 0) {
-        setSession(null);
-        setError(
-          'Tu sesión venció. Iniciá sesión para continuar; las operaciones no se repiten automáticamente.',
-        );
-      }
-    }, 10000);
     const poll = setInterval(() => {
       api<Session>('/auth/me')
         .then(setSession)
@@ -217,7 +202,6 @@ export function Admin() {
         });
     }, 60000);
     return () => {
-      clearInterval(timer);
       clearInterval(poll);
     };
   }, [session]);
@@ -401,21 +385,6 @@ export function Admin() {
         </button>
       </aside>
       <main className="admin-main">
-        {remaining < 120000 && (
-          <p className="notice" role="status">
-            La sesión vence en menos de dos minutos.{' '}
-            <button
-              onClick={() =>
-                safely(async () => {
-                  await run('/auth/keepalive');
-                  setSession(await api<Session>('/auth/me'));
-                })
-              }
-            >
-              Seguir trabajando
-            </button>
-          </p>
-        )}
         <div className="admin-top">
           <span>{session.username}</span>
           <span>Gestión de SuperPet</span>
@@ -545,7 +514,6 @@ function CatalogAdmin({
                     : '/admin/products',
                   {
                     name: value(f, 'name'),
-                    slug: value(f, 'slug'),
                     description: value(f, 'description'),
                     categoryId: value(f, 'category'),
                     brandId: value(f, 'brand') || null,
@@ -558,11 +526,6 @@ function CatalogAdmin({
             }
           >
             <Field name="name" label="Nombre" defaultValue={selected?.name} />
-            <Field
-              name="slug"
-              label="Identificador en la URL"
-              defaultValue={selected?.slug}
-            />
             <label>
               Descripción
               <textarea

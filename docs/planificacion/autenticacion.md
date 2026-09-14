@@ -1,5 +1,11 @@
 # Acceso administrativo
 
+## Actualización confirmada — 2026-09-14
+
+El usuario pidió quitar el límite de la sesión administrativa. Se eliminan los vencimientos de 12 horas y 30 minutos de inactividad descritos históricamente abajo. La sesión autenticada permanece vigente hasta cerrar sesión, cambiar/restablecer contraseña, revocarla o desactivar la cuenta. Las presesiones anónimas y los enlaces de recuperación conservan sus vencimientos. La cookie sigue siendo HttpOnly, Secure y SameSite=Lax; tiene una duración de almacenamiento de 400 días renovada al consultar la sesión, sujeta a que el navegador no la borre. Ese límite del navegador no es un temporizador de cierre del panel.
+
+No requiere migración: las filas autenticadas se distinguen por adminId; expiresAt conserva compatibilidad de esquema y no determina su vigencia. Las nuevas usan fecha centinela 9999-12-31; el mantenimiento solo elimina presesiones vencidas. CSRF y verificación del administrador activo siguen obligatorios.
+
 ## Confirmado
 
 Login obligatorio para el panel. PostgreSQL guarda el usuario y el hash de su contraseña. El usuario proporcionará las credenciales más adelante; no se solicitan ahora ni se guardan en documentación o Engram. Un solo administrador. La autorización se verifica en el backend para cada lectura o modificación administrativa.

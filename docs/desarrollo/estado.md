@@ -1,5 +1,10 @@
 # Estado de desarrollo
 
+## Ajustes administrativos — 2026-09-14
+
+- El producto genera su URL desde el nombre al crearse: minúsculas sin tildes y palabras separadas por guiones. Colisiones resueltas con sufijos numéricos mediante la restricción única de PostgreSQL, incluso con creaciones simultáneas. Editar el nombre sin enviar slug conserva los enlaces existentes. El panel ya no pide identificador de URL; API mantiene slug opcional por compatibilidad.
+- Sesión administrativa sin cierre por duración o inactividad, conforme a la solicitud del usuario. Mantiene cierre manual, revocación por cambio de contraseña, cookie segura y CSRF. Presesiones y recuperación sí vencen; ver autenticacion.md.
+
 ## Implementación local — 2026-09-10
 
 Desarrollo autorizado por el usuario. El monorepo contiene API NestJS, frontend Next.js y PostgreSQL con Drizzle; cuatro migraciones y herramientas de base local, administrador de desarrollo y mantenimiento. No se ha desplegado ni configurado infraestructura productiva.

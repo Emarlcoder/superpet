@@ -20,6 +20,7 @@ import { ensure, json } from '../domain/errors.js';
 import * as v from '../domain/validation.js';
 import * as s from '../db/schema.js';
 import type { Transaction } from '../db/database.js';
+import { productSlug } from '../domain/product-slug.js';
 
 @Controller()
 export class CommerceController {
@@ -172,8 +173,12 @@ export class CommerceController {
       .parse(body);
     return this.auth.login(req, res, input.username, input.password);
   }
-  @Get('auth/me') async me(@Req() req: Request) {
+  @Get('auth/me') async me(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const p = await this.auth.session(req);
+    this.auth.refreshSessionCookie(req, res);
     const [admin] = await this.c.db
       .select({ username: s.admins.username })
       .from(s.admins)
@@ -257,8 +262,21 @@ export class CommerceController {
       input,
       async (tx) => {
         await this.validateTaxonomy(tx, input.categoryId, input.brandId);
-        const [p] = await tx.insert(s.products).values(input).returning();
-        return p;
+        if (input.slug) {
+          const [p] = await tx
+            .insert(s.products)
+            .values({ ...input, slug: input.slug })
+            .returning();
+          return p;
+        }
+        for (let sequence = 1; ; sequence++) {
+          const [p] = await tx
+            .insert(s.products)
+            .values({ ...input, slug: productSlug(input.name, sequence) })
+            .onConflictDoNothing({ target: s.products.slug })
+            .returning();
+          if (p) return p;
+        }
       },
       true,
       true,

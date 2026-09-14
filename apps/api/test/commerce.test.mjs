@@ -7,7 +7,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { connectDatabase } from '../dist/db/database.js';
 import * as s from '../dist/db/schema.js';
 import { Commerce } from '../dist/domain/commerce.js';
-import { Auth, passwordHash } from '../dist/domain/auth.js';
+import { Auth, passwordHash, digest } from '../dist/domain/auth.js';
 import { createApp } from '../dist/app.js';
 import sharp from 'sharp';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -223,6 +223,64 @@ describe.skipIf(!connectionString)(
         (await request('/admin/products', {}, { 'X-CSRF-Token': csrf }, 'POST'))
           .status,
       ).toBe(422);
+    });
+    it('generates distinct URLs concurrently, replays creation and preserves URLs on rename', async () => {
+      const [existing] = await connection.db
+        .select()
+        .from(s.products)
+        .where(eq(s.products.id, product));
+      const input = {
+        name: 'Aliménto automático',
+        description: '',
+        categoryId: existing.categoryId,
+        brandId: null,
+        species: ['cat'],
+      };
+      const headers = () => ({
+        'X-CSRF-Token': csrf,
+        'Idempotency-Key': randomUUID(),
+        'X-Operation-Epoch': epoch,
+      });
+      const firstHeaders = headers();
+      const results = await Promise.all([
+        request('/admin/products', input, firstHeaders),
+        request('/admin/products', input, headers()),
+      ]);
+      expect(results.map((r) => r.status)).toEqual([201, 201]);
+      expect(results.map((r) => r.body.slug).sort()).toEqual([
+        'alimento-automatico',
+        'alimento-automatico-2',
+      ]);
+      const replay = await request('/admin/products', input, firstHeaders);
+      expect(replay.body.id).toBe(results[0].body.id);
+      const edited = await request(
+        '/admin/products/' + results[0].body.id,
+        {
+          ...input,
+          name: 'Nombre nuevo',
+          expectedVersion: results[0].body.version,
+        },
+        headers(),
+        'PATCH',
+      );
+      expect(edited.status).toBe(200);
+      expect(edited.body.slug).toBe(results[0].body.slug);
+    });
+    it('expired anonymous presessions still cannot log in', async () => {
+      const raw = randomBytes(32).toString('base64url');
+      const expiredCsrf = randomBytes(32).toString('base64url');
+      await connection.db.insert(s.sessions).values({
+        tokenHash: digest(raw),
+        csrf: expiredCsrf,
+        expiresAt: new Date(0),
+      });
+      const response = await request(
+        '/auth/login',
+        { username: 'test-admin', password },
+        { Cookie: 'superpet_session=' + raw, 'X-CSRF-Token': expiredCsrf },
+      );
+      expect(response.status).toBe(401);
+      expect((await request('/auth/me')).status).toBe(200);
     });
     it('bulk quantities consolidate and floor grams without promising 3kg from 2800g', async () => {
       const catalog = await commerce.catalog();
@@ -628,7 +686,7 @@ describe.skipIf(!connectionString)(
       ).toBe(401);
       expect(await stock(sku)).toBe(before);
     });
-    it('polling does not extend inactivity and expired sessions cannot read admin data', async () => {
+    it('authenticated sessions survive inactivity and former time limits', async () => {
       const [session] = await connection.db
         .select()
         .from(s.sessions)
@@ -649,12 +707,12 @@ describe.skipIf(!connectionString)(
           .update(s.sessions)
           .set({ lastActivityAt: new Date(Date.now() - 31 * 60000) })
           .where(eq(s.sessions.id, session.id));
-        expect((await request('/admin/products')).status).toBe(401);
+        expect((await request('/admin/products')).status).toBe(200);
         await connection.db
           .update(s.sessions)
           .set({ lastActivityAt: new Date(), expiresAt: new Date(0) })
           .where(eq(s.sessions.id, session.id));
-        expect((await request('/admin/products')).status).toBe(401);
+        expect((await request('/admin/products')).status).toBe(200);
       } finally {
         await connection.db
           .update(s.sessions)

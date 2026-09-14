@@ -19,6 +19,7 @@ import { DomainError } from './errors.js';
 export const digest = (value: string) =>
   createHash('sha256').update(value).digest('hex');
 const token = () => randomBytes(32).toString('base64url');
+const persistentCookieAge = 400 * 24 * 60 * 60 * 1000;
 const options = {
   type: argon2id,
   memoryCost: 19456,
@@ -166,9 +167,7 @@ export class Auth {
       .from(s.sessions)
       .where(eq(s.sessions.tokenHash, digest(raw)));
     ensure(
-      session &&
-        session.expiresAt > new Date() &&
-        session.lastActivityAt > new Date(Date.now() - 1800000),
+      session && (session.adminId || session.expiresAt > new Date()),
       'UNAUTHENTICATED',
       401,
     );
@@ -239,7 +238,7 @@ export class Auth {
       : null;
     const raw = token(),
       csrf = token(),
-      expiresAt = new Date(Date.now() + 43200000);
+      expiresAt = new Date('9999-12-31T00:00:00.000Z');
     await this.db.transaction(async (tx) => {
       const [current] = await tx
         .select()
@@ -264,7 +263,7 @@ export class Auth {
         .insert(s.sessions)
         .values({ adminId: admin.id, tokenHash: digest(raw), csrf, expiresAt });
     });
-    this.setCookie(res, raw, 43200000);
+    this.setCookie(res, raw, persistentCookieAge);
     return {
       id: admin.id,
       username: admin.username,
@@ -278,6 +277,9 @@ export class Auth {
       .delete(s.sessions)
       .where(eq(s.sessions.id, principal.sessionId));
     this.setCookie(res, '', 0);
+  }
+  refreshSessionCookie(req: Request, res: Response) {
+    this.setCookie(res, this.cookie(req), persistentCookieAge);
   }
   async change(req: Request, currentPassword: string, newPassword: string) {
     const p = await this.session(req, true, true);
@@ -510,7 +512,11 @@ export class Auth {
     return { changed: true };
   }
   async cleanup() {
-    await this.db.delete(s.sessions).where(sql`${s.sessions.expiresAt}<now()`);
+    await this.db
+      .delete(s.sessions)
+      .where(
+        sql`${s.sessions.adminId} is null and ${s.sessions.expiresAt}<now()`,
+      );
     await this.db
       .delete(s.rates)
       .where(sql`${s.rates.expiresAt}<now()-interval '1 day'`);
