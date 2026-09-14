@@ -33,7 +33,9 @@ El almacenamiento local de imágenes es solo desarrollo. Las funciones no reempl
 
 Existen ambos proyectos publicados y Neon conectado con migraciones aplicadas. El administrador remoto fue aprovisionado; su correo de recuperación aún no está verificado y falta configurar Resend. No guardar credenciales en este documento. Pendientes de la salida comercial: almacenamiento de imágenes, correo, backups y plan de alojamiento comercial. No hay compra ni upgrade autorizado.
 
-Incidente 2026-09-14: la web recibía HTML 404 en `/api/v1` por falta de proxy, y la API devolvía FUNCTION_INVOCATION_FAILED por validar el PORT interno de Vercel. También aparecía una entrada automática `src/app.js` sin export predeterminado. Correcciones: proxy mismo origen, entrada única con JavaScript compilado y errores de respuesta inesperada traducidos a un mensaje recuperable para el usuario. Verificar health JSON, presesión, login, recarga, lecturas administrativas y logout en el despliegue nuevo.
+Incidente 2026-09-14: la web recibía HTML 404 en `/api/v1` por falta de proxy, y la API devolvía FUNCTION_INVOCATION_FAILED por validar el PORT interno de Vercel. También aparecía una entrada automática `src/app.js` sin export predeterminado. Correcciones en `8cab477`: proxy mismo origen, entrada única con JavaScript compilado y errores de respuesta inesperada traducidos a un mensaje recuperable para el usuario.
+
+Verificación del despliegue: health directo y mediante la web devuelven JSON 200; inicio de sesión real y listado administrativo de compras funcionan; recargar conserva la sesión y el cierre de sesión devuelve al formulario de acceso. Sin sesión se obtiene JSON 401 y una presesión solicitada desde origen ajeno devuelve JSON 403. Pasaron 33 pruebas focalizadas, tipos y build de Next. Las pruebas remotas no crean compras ni alteran inventario.
 
 ## Referencias verificadas
 
