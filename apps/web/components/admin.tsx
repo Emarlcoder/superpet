@@ -1060,7 +1060,6 @@ function InventoryAdmin({
                     <th>Operación</th>
                     <th>Diferencia</th>
                     <th>Saldo</th>
-                    <th>Motivo</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1082,7 +1081,6 @@ function InventoryAdmin({
                       <td>{operationLabel(h.operation.kind)}</td>
                       <td>{h.movement.delta}</td>
                       <td>{h.movement.balanceAfter}</td>
-                      <td>{h.operation.reason}</td>
                     </tr>
                   ))}
                 </tbody>
