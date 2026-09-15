@@ -113,6 +113,8 @@ const messages: Record<string, string> = {
   IMAGE_TYPE_UNSUPPORTED: 'Usá una imagen estática JPEG, PNG o WebP.',
   IMAGE_STORAGE_UNAVAILABLE:
     'No se pudo guardar la imagen. Reintentá con el mismo archivo.',
+  MEDIA_NOT_CONFIGURED:
+    'Todavía falta configurar el almacenamiento de imágenes. El producto está guardado; podrás agregar sus fotos cuando esté conectado.',
   LAST_PUBLISHED_IMAGE:
     'Agregá otra foto o pasá el producto a borrador antes de quitar su última imagen.',
   ALREADY_EXISTS: 'Ya existe un registro con ese código o identificador.',

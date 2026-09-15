@@ -457,14 +457,17 @@ function CatalogAdmin({
   const [products, setProducts] = useState<Product[]>([]),
     [tax, setTax] = useState<Taxonomy[]>([]),
     [selected, setSelected] = useState<Product | null>(null);
-  const load = useCallback(async () => {
+  const load = useCallback(async (selectId?: string) => {
     const [p, t] = await Promise.all([
       api<{ items: Product[] }>('/admin/products'),
       api<Taxonomy[]>('/admin/taxonomies'),
     ]);
     setProducts(p.items);
     setTax(t);
-    setSelected((current) => p.items.find((p) => p.id === current?.id) ?? null);
+    setSelected(
+      (current) =>
+        p.items.find((p) => p.id === (selectId ?? current?.id)) ?? null,
+    );
   }, []);
   useEffect(() => {
     load().catch((e) => report(e.message));
@@ -506,24 +509,21 @@ function CatalogAdmin({
         <section key={selected?.id ?? 'new'}>
           <h2>{selected ? 'Editar producto' : 'Crear producto'}</h2>
           <Form
-            onSubmit={(f) =>
-              act(() =>
-                run(
-                  selected
-                    ? '/admin/products/' + selected.id
-                    : '/admin/products',
-                  {
-                    name: value(f, 'name'),
-                    description: value(f, 'description'),
-                    categoryId: value(f, 'category'),
-                    brandId: value(f, 'brand') || null,
-                    species: f.getAll('species'),
-                    ...(selected ? { expectedVersion: selected.version } : {}),
-                  },
-                  selected ? 'PATCH' : 'POST',
-                ),
-              )
-            }
+            onSubmit={async (f) => {
+              const saved = await run<{ id: string }>(
+                selected ? '/admin/products/' + selected.id : '/admin/products',
+                {
+                  name: value(f, 'name'),
+                  description: value(f, 'description'),
+                  categoryId: value(f, 'category'),
+                  brandId: value(f, 'brand') || null,
+                  species: f.getAll('species'),
+                  ...(selected ? { expectedVersion: selected.version } : {}),
+                },
+                selected ? 'PATCH' : 'POST',
+              );
+              await load(selected?.id ?? saved.id);
+            }}
           >
             <Field name="name" label="Nombre" defaultValue={selected?.name} />
             <label>
@@ -582,10 +582,120 @@ function CatalogAdmin({
                 Gatos
               </label>
             </div>
-            <button>Guardar producto</button>
+            <button>
+              {selected ? 'Guardar producto' : 'Guardar y agregar fotos'}
+            </button>
           </Form>
+          {!selected && (
+            <p>
+              Guardá los datos del producto para agregar sus fotos y
+              presentaciones.
+            </p>
+          )}
           {selected && (
             <>
+              <h3>Fotos del producto</h3>
+              <p>
+                Agregá hasta 8 fotos. La primera será la imagen principal del
+                catálogo.
+              </p>
+              {selected.images.length === 0 && (
+                <p>Este producto todavía no tiene fotos.</p>
+              )}
+              <div className="photo-grid">
+                {selected.images.map((i, index) => (
+                  <div key={i.id}>
+                    <img src={media(i.variants[0]!.key)} alt={i.alt} />
+                    <Form
+                      onSubmit={(f) =>
+                        act(() =>
+                          run(
+                            '/admin/products/' +
+                              selected.id +
+                              '/images/' +
+                              i.id,
+                            {
+                              alt: value(f, 'alt'),
+                              expectedVersion: selected.version,
+                            },
+                            'PATCH',
+                          ),
+                        )
+                      }
+                    >
+                      <Field
+                        name="alt"
+                        label="Descripción"
+                        defaultValue={i.alt}
+                      />
+                      <button className="secondary">Guardar descripción</button>
+                    </Form>
+                    {index > 0 && (
+                      <button
+                        className="secondary"
+                        onClick={() =>
+                          act(() =>
+                            run(
+                              '/admin/products/' +
+                                selected.id +
+                                '/images/order',
+                              {
+                                expectedVersion: selected.version,
+                                imageIds: [
+                                  i.id,
+                                  ...selected.images
+                                    .filter((photo) => photo.id !== i.id)
+                                    .map((photo) => photo.id),
+                                ],
+                              },
+                              'PATCH',
+                            ),
+                          )
+                        }
+                      >
+                        Usar como principal
+                      </button>
+                    )}
+                    <button
+                      className="secondary"
+                      onClick={() =>
+                        act(() =>
+                          run(
+                            '/admin/products/' +
+                              selected.id +
+                              '/images/' +
+                              i.id,
+                            { expectedVersion: selected.version },
+                            'DELETE',
+                          ),
+                        )
+                      }
+                    >
+                      Quitar foto
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <Form
+                onSubmit={(f) =>
+                  act(() => {
+                    f.set('expectedVersion', String(selected.version));
+                    return run('/admin/products/' + selected.id + '/images', f);
+                  })
+                }
+              >
+                <label>
+                  Foto (JPEG, PNG o WebP, hasta 4 MiB)
+                  <input
+                    type="file"
+                    name="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    required
+                  />
+                </label>
+                <Field name="alt" label="Descripción de la foto" />
+                <button>Subir foto</button>
+              </Form>
               <div className="actions">
                 <button
                   onClick={() =>
@@ -697,101 +807,6 @@ function CatalogAdmin({
                   <button>Agregar presentación</button>
                 </Form>
               </details>
-              <h3>Fotos</h3>
-              <div className="photo-grid">
-                {selected.images.map((i, index) => (
-                  <div key={i.id}>
-                    <img src={media(i.variants[0]!.key)} alt={i.alt} />
-                    <Form
-                      onSubmit={(f) =>
-                        act(() =>
-                          run(
-                            '/admin/products/' +
-                              selected.id +
-                              '/images/' +
-                              i.id,
-                            {
-                              alt: value(f, 'alt'),
-                              expectedVersion: selected.version,
-                            },
-                            'PATCH',
-                          ),
-                        )
-                      }
-                    >
-                      <Field
-                        name="alt"
-                        label="Descripción"
-                        defaultValue={i.alt}
-                      />
-                      <button className="secondary">Guardar descripción</button>
-                    </Form>
-                    {index > 0 && (
-                      <button
-                        className="secondary"
-                        onClick={() =>
-                          act(() =>
-                            run(
-                              '/admin/products/' +
-                                selected.id +
-                                '/images/order',
-                              {
-                                expectedVersion: selected.version,
-                                imageIds: [
-                                  i.id,
-                                  ...selected.images
-                                    .filter((photo) => photo.id !== i.id)
-                                    .map((photo) => photo.id),
-                                ],
-                              },
-                              'PATCH',
-                            ),
-                          )
-                        }
-                      >
-                        Usar como principal
-                      </button>
-                    )}
-                    <button
-                      className="secondary"
-                      onClick={() =>
-                        act(() =>
-                          run(
-                            '/admin/products/' +
-                              selected.id +
-                              '/images/' +
-                              i.id,
-                            { expectedVersion: selected.version },
-                            'DELETE',
-                          ),
-                        )
-                      }
-                    >
-                      Quitar foto
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <Form
-                onSubmit={(f) =>
-                  act(() => {
-                    f.set('expectedVersion', String(selected.version));
-                    return run('/admin/products/' + selected.id + '/images', f);
-                  })
-                }
-              >
-                <label>
-                  Foto (JPEG, PNG o WebP, hasta 4 MiB)
-                  <input
-                    type="file"
-                    name="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    required
-                  />
-                </label>
-                <Field name="alt" label="Descripción de la foto" />
-                <button>Subir foto</button>
-              </Form>
             </>
           )}
         </section>
