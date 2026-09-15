@@ -1,5 +1,6 @@
 import { StoreHeader } from '../components/storefront';
 import { PromotionsCarousel } from '../components/promotions';
+import { HomeCollections } from '../components/home-collections';
 
 export default function Home() {
   return (
@@ -10,48 +11,67 @@ export default function Home() {
       <StoreHeader />
       <main id="contenido">
         <h1 className="sr-only">SuperPet — todo para perros y gatos</h1>
-        <PromotionsCarousel />
+        <div id="promociones">
+          <PromotionsCarousel />
+        </div>
+        <div className="shopping-benefits">
+          <div>
+            <strong>Retirá en el local</strong>
+            <span>Coordinamos cuándo pasar</span>
+          </div>
+          <div>
+            <strong>Envíos a coordinar</strong>
+            <span>Consultá cobertura y costo</span>
+          </div>
+          <div>
+            <strong>Comprá a tu manera</strong>
+            <span>Bolsas cerradas y alimento por kilo</span>
+          </div>
+        </div>
+        <HomeCollections />
         <section
-          id="catalogo"
-          className="catalog"
-          aria-labelledby="catalog-title"
+          className="home-how"
+          id="como-comprar"
+          aria-labelledby="how-title"
         >
           <div>
-            <p className="intro">Nuestra tienda</p>
-            <h2 id="catalog-title">Lo que necesitan, en un solo lugar.</h2>
+            <h2 id="how-title">Tu pedido, así de simple</h2>
+            <p>Elegí lo que necesitan. El resto lo coordinamos juntos.</p>
           </div>
-          <ul className="categories" aria-label="Categorías">
-            <li>Alimentos</li>
-            <li>Accesorios</li>
-            <li>Juguetes</li>
-            <li>Higiene</li>
-          </ul>
-          <div className="empty">
-            <h3>Elegí. Revisá. Coordiná.</h3>
-            <p>
-              Armá tu carrito y coordiná tu pedido con SuperPet por WhatsApp.
-              Encontrá bolsas cerradas y alimento suelto por kilo.
-            </p>
-          </div>
-          <a className="button" href="/productos">
-            Ver catálogo
-          </a>
-        </section>
-        <section className="delivery" aria-label="Cómo comprar">
-          <div>
-            <h2>A tu manera</h2>
-            <p>Retiro en el local o envío a coordinar.</p>
-          </div>
-          <p>
-            Elegí tus productos, revisá tu pedido y coordiná con nosotros por
-            WhatsApp. El costo y los detalles del envío se acuerdan por ese
-            medio.
-          </p>
+          <ol>
+            <li>
+              <strong>Armá tu carrito</strong>
+              <span>Elegí productos y cantidades.</span>
+            </li>
+            <li>
+              <strong>Coordiná por WhatsApp</strong>
+              <span>Envianos el pedido desde el carrito.</span>
+            </li>
+            <li>
+              <strong>Retirá o recibí en casa</strong>
+              <span>Acordamos entrega y pago por chat.</span>
+            </li>
+          </ol>
         </section>
       </main>
-      <footer>
-        <strong>SuperPet</strong>
-        <span>El cuidado de todos los días.</span>
+      <footer className="store-footer">
+        <div>
+          <strong>SuperPet</strong>
+          <p>El cuidado de todos los días.</p>
+          <span>Ciudad de la Costa, Uruguay</span>
+        </div>
+        <div>
+          <h2>Explorá la tienda</h2>
+          <a href="/productos?species=dog">Perros</a>
+          <a href="/productos?species=cat">Gatos</a>
+          <a href="/productos">Todos los productos</a>
+        </div>
+        <div>
+          <h2>Tu compra</h2>
+          <a href="/#como-comprar">Cómo comprar</a>
+          <a href="/carrito">Mi carrito</a>
+          <p>Entrega y pago a coordinar por WhatsApp.</p>
+        </div>
       </footer>
     </>
   );

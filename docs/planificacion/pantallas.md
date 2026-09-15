@@ -1,5 +1,7 @@
 # Pantallas y recorridos de SuperPet
 
+Revisión visual local solicitada tomando puppis.com.ar como referencia: encabezado con buscador prominente, carrito y barra separada de navegación; home con carrusel existente, información de entrega, accesos por mascota, categorías, productos y marcas del catálogo, pasos de compra y pie de página. Se conserva identidad SuperPet, perros/gatos y coordinación por WhatsApp. Buscador y enlaces de marcas sincronizan filtros por URL. Publicación de esta revisión autorizada por el usuario tras revisar la versión local.
+
 Actualización confirmada 2026-09-15: el bloque de bienvenida del home se reemplaza por un carrusel de promociones administradas desde la pestaña **Promociones**. Solo se carga la imagen; debajo se listan todas con eliminar y deshabilitar/habilitar. Desarrollo y pruebas en local; publicación autorizada posteriormente por el usuario. Ver [implementación y ejecución local](../desarrollo/promociones.md).
 
 Actualización confirmada 2026-09-15: la carga administrativa usa una publicación por bolsa/tamaño o artículo, con fotos y descripción propias. Precio de bolsa/unidad obligatorio; switch de venta por kilo con precio/kg y peso de bolsa. SKU y relación de apertura se generan internamente. Ya no se muestran formularios de presentaciones ni vínculos de fraccionamiento; Inventario conserva la apertura explícita. Las referencias históricas a múltiples presentaciones dentro de una publicación quedan reemplazadas por este flujo.
@@ -108,3 +110,4 @@ Primero T04/T05 y A03/A04: definen el flujo central y la relación con stock. De
 El usuario confirmó identidad existente y señaló Instagram @superpet.uy como guía. Ver identidad-visual.md para los elementos observados y su aplicación propuesta. Hay referencia suficiente para bocetos; originales del logo, tonos exactos y tipografía final siguen pendientes. No inventar una identidad aprobada.
 
 Pendientes funcionales: correcciones/devoluciones de realizadas, precio acordado tras cambios de catálogo, política de datos y recuperación de administrador. Datos comerciales pendientes: contacto/local, catálogo real y pesos, imágenes y condiciones. Diseño técnico pendiente: entidades detalladas, contratos API, infraestructura y backlog final. Este mapa no cierra toda la planificación.
+
