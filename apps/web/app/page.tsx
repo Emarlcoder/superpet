@@ -1,4 +1,5 @@
 import { StoreHeader } from '../components/storefront';
+import { PromotionsCarousel } from '../components/promotions';
 
 export default function Home() {
   return (
@@ -8,24 +9,8 @@ export default function Home() {
       </a>
       <StoreHeader />
       <main id="contenido">
-        <section className="hero">
-          <div className="hero-copy">
-            <p className="intro">Bienvenidos a SuperPet</p>
-            <h1>Todo empieza por cuidarlos bien.</h1>
-            <p className="lead">
-              Alimentos, accesorios y pequeños favoritos para acompañar cada día
-              de tu perro o gato.
-            </p>
-            <a className="button" href="/productos">
-              Explorar productos
-            </a>
-          </div>
-          <div className="hero-note">
-            <span className="pet-word">Perros.</span>
-            <span className="pet-word">Gatos.</span>
-            <p>Un lugar para sus cosas favoritas.</p>
-          </div>
-        </section>
+        <h1 className="sr-only">SuperPet — todo para perros y gatos</h1>
+        <PromotionsCarousel />
         <section
           id="catalogo"
           className="catalog"

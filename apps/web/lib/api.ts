@@ -1,5 +1,13 @@
 export const API = '/api/v1';
 export type Variant = { key: string; width: number; height: number };
+export type Promotion = {
+  id: string;
+  imageKey: string;
+  width: number;
+  height: number;
+  active: boolean;
+  version: number;
+};
 export type Sku = {
   id: string;
   code: string;
@@ -95,6 +103,10 @@ export class ApiError extends Error {
   }
 }
 const messages: Record<string, string> = {
+  PROMOTION_DIMENSIONS_INVALID:
+    'Usá una imagen de al menos 300 × 100 píxeles, hasta 6000 por lado y 16 megapíxeles.',
+  PROMOTION_LIMIT_REACHED:
+    'Podés guardar hasta 50 promociones. Eliminá alguna antes de subir otra.',
   VALIDATION_ERROR: 'Revisá los datos ingresados y las cantidades.',
   QUOTE_EXPIRED:
     'La cotización venció. Revisá nuevamente los precios antes de enviar.',

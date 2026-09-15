@@ -38,7 +38,7 @@ a:focus-visible {
   top: 1rem;
 }
 .header {
-  background: #000;
+  background: #181818;
   color: #fff;
   padding: 1rem max(2rem, calc((100% - 1136px) / 2));
   display: flex;
@@ -48,6 +48,84 @@ a:focus-visible {
 }
 .header a:focus-visible {
   outline-color: #fff;
+}
+.promotions-carousel {
+  position: relative;
+  margin: 1rem;
+  overflow: hidden;
+  border-radius: 24px;
+  background: transparent;
+}
+.promotion-slide {
+  background: #f3f6f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 12 / 5;
+}
+.promotion-slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.carousel-controls,
+.carousel-dots,
+.promotion-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.carousel-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.65rem;
+}
+.carousel-controls button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.carousel-controls > button {
+  border: 1px solid #000;
+}
+.carousel-dots button {
+  background: transparent;
+  padding: 0.6rem;
+}
+.carousel-dots span {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #71838c;
+  box-shadow: 0 0 0 2px #fff;
+}
+.carousel-dots [aria-current] span {
+  background: var(--red);
+}
+.promotions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 1.25rem;
+}
+.promotion-card {
+  padding: 1rem;
+  border: 1px solid #d4dee3;
+  border-radius: 16px;
+}
+.promotion-card > img {
+  width: 100%;
+  height: 180px;
+  object-fit: contain;
+  background: #f3f6f7;
+  border-radius: 8px;
+}
+.promotion-actions {
+  justify-content: flex-start;
 }
 .brand {
   display: inline-flex;

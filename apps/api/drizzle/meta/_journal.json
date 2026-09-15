@@ -29,6 +29,13 @@
       "when": 1789005862333,
       "tag": "0003_flowery_silver_sable",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789477747117,
+      "tag": "0004_promotions",
+      "breakpoints": true
     }
   ]
 }

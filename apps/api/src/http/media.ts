@@ -27,7 +27,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { Auth } from '../domain/auth.js';
 import { Commerce } from '../domain/commerce.js';
@@ -135,6 +135,154 @@ export class MediaController {
       await mkdir(folder, { recursive: true });
       await writeFile(resolve(folder, key), bytes);
     }
+  }
+  @Get('promotions') async publicPromotions() {
+    return this.c.db
+      .select({
+        id: s.promotions.id,
+        imageKey: s.promotions.imageKey,
+        width: s.promotions.width,
+        height: s.promotions.height,
+      })
+      .from(s.promotions)
+      .where(eq(s.promotions.active, true))
+      .orderBy(desc(s.promotions.createdAt), desc(s.promotions.id));
+  }
+  @Get('admin/promotions') async listPromotions(@Req() req: Request) {
+    await this.auth.session(req);
+    return this.c.db
+      .select()
+      .from(s.promotions)
+      .orderBy(desc(s.promotions.createdAt), desc(s.promotions.id));
+  }
+  @Post('admin/promotions')
+  @UseGuards(MediaGuard)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 4 * 1024 * 1024, files: 1, fields: 0 },
+    }),
+  )
+  async uploadPromotion(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @UploadedFile() file: { buffer: Buffer; mimetype: string },
+  ) {
+    const principal = await this.auth.session(req, true, true);
+    await this.auth.limit('promotion:' + principal.adminId, 10, 60);
+    ensure(
+      file && ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype),
+      'IMAGE_TYPE_UNSUPPORTED',
+      415,
+    );
+    const meta = await sharp(file.buffer, { limitInputPixels: 16000000 })
+      .metadata()
+      .catch(() => {
+        throw new DomainError('IMAGE_INVALID', 422);
+      });
+    ensure(
+      ['jpeg', 'png', 'webp'].includes(meta.format ?? '') &&
+        (meta.pages ?? 1) === 1,
+      'IMAGE_TYPE_UNSUPPORTED',
+      415,
+    );
+    ensure(
+      meta.width &&
+        meta.height &&
+        meta.width >= 300 &&
+        meta.height >= 100 &&
+        meta.width <= 6000 &&
+        meta.height <= 6000,
+      'PROMOTION_DIMENSIONS_INVALID',
+      422,
+    );
+    const hash = createHash('sha256').update(file.buffer).digest('hex');
+    return this.edit(req, res, 'promotion.upload', { hash }, async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended('promotion.upload',0))`,
+      );
+      const existing = await tx
+        .select({ id: s.promotions.id })
+        .from(s.promotions);
+      ensure(existing.length < 50, 'PROMOTION_LIMIT_REACHED', 422);
+      const { data, info } = await sharp(file.buffer, {
+        limitInputPixels: 16000000,
+      })
+        .rotate()
+        .resize({
+          width: 1280,
+          height: 1280,
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .toColorspace('srgb')
+        .webp({ quality: 88 })
+        .timeout({ seconds: 10 })
+        .toBuffer({ resolveWithObject: true });
+      const key =
+        (process.env.MEDIA_PROVIDER === 'imagekit' ? 'ik-' : '') +
+        randomUUID() +
+        '-' +
+        hash.slice(0, 12) +
+        '-1280.webp';
+      // Journal survives rollback; unreferenced uploads are collected by cleanup.
+      await this.put(key, data);
+      const [promotion] = await tx
+        .insert(s.promotions)
+        .values({ imageKey: key, width: info.width, height: info.height })
+        .returning();
+      return promotion;
+    });
+  }
+  @Patch('admin/promotions/:id') async togglePromotion(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() body: unknown,
+  ) {
+    v.id.parse(id);
+    const input = z
+      .strictObject({ active: z.boolean(), expectedVersion: v.version })
+      .parse(body);
+    return this.edit(req, res, 'promotion.toggle:' + id, input, async (tx) => {
+      const [updated] = await tx
+        .update(s.promotions)
+        .set({ active: input.active, version: input.expectedVersion + 1 })
+        .where(
+          and(
+            eq(s.promotions.id, id),
+            eq(s.promotions.version, input.expectedVersion),
+          ),
+        )
+        .returning();
+      ensure(updated, 'VERSION_CONFLICT');
+      return updated;
+    });
+  }
+  @Delete('admin/promotions/:id') async removePromotion(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() body: unknown,
+  ) {
+    v.id.parse(id);
+    const input = z.strictObject({ expectedVersion: v.version }).parse(body);
+    return this.edit(req, res, 'promotion.remove:' + id, input, async (tx) => {
+      const [removed] = await tx
+        .delete(s.promotions)
+        .where(
+          and(
+            eq(s.promotions.id, id),
+            eq(s.promotions.version, input.expectedVersion),
+          ),
+        )
+        .returning();
+      ensure(removed, 'VERSION_CONFLICT');
+      await tx
+        .update(s.mediaObjects)
+        .set({ eligibleAt: new Date(Date.now() + 7 * 86400000) })
+        .where(eq(s.mediaObjects.key, removed.imageKey));
+      return { deleted: true };
+    });
   }
   @Post('admin/products/:id/images')
   @UseGuards(MediaGuard)
@@ -561,7 +709,7 @@ export class MediaController {
       .select()
       .from(s.mediaObjects)
       .where(
-        sql`${s.mediaObjects.eligibleAt}<now() and not exists (select 1 from images where images.original_key=${s.mediaObjects.key} or images.variants @> jsonb_build_array(jsonb_build_object('key',${s.mediaObjects.key})))`,
+        sql`${s.mediaObjects.eligibleAt}<now() and not exists (select 1 from images where images.original_key=${s.mediaObjects.key} or images.variants @> jsonb_build_array(jsonb_build_object('key',${s.mediaObjects.key}))) and not exists (select 1 from promotions where promotions.image_key=${s.mediaObjects.key})`,
       )
       .limit(limit);
     for (const object of candidates) {
@@ -573,6 +721,12 @@ export class MediaController {
         )
         .limit(1);
       if (referenced.length) continue;
+      const promotion = await this.c.db
+        .select({ id: s.promotions.id })
+        .from(s.promotions)
+        .where(eq(s.promotions.imageKey, object.key))
+        .limit(1);
+      if (promotion.length) continue;
       if (object.key.startsWith('ik-')) {
         await deleteImagekit(object.key, object.privateFile);
       } else if (process.env.R2_ENDPOINT) {

@@ -16,6 +16,15 @@ import type { Line, StoreData } from '../domain/types.js';
 
 const time = (name: string) =>
   timestamp(name, { withTimezone: true, mode: 'date' });
+export const promotions = pgTable('promotions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  imageKey: text('image_key').notNull(),
+  width: integer('width').notNull(),
+  height: integer('height').notNull(),
+  active: boolean('active').notNull().default(true),
+  version: integer('version').notNull().default(1),
+  createdAt: time('created_at').notNull().defaultNow(),
+});
 export const mediaObjects = pgTable('media_objects', {
   key: text('key').primaryKey(),
   privateFile: boolean('private_file').notNull(),

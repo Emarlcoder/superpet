@@ -15,6 +15,7 @@ import {
   type Product,
   type Purchase,
   type Store,
+  type Promotion,
 } from '../lib/api';
 
 type Taxonomy = {
@@ -355,6 +356,7 @@ export function Admin() {
           {[
             ['purchases', 'Compras pendientes'],
             ['catalog', 'Catálogo'],
+            ['promotions', 'Promociones'],
             ['inventory', 'Inventario'],
             ['store', 'Configuración'],
             ['security', 'Seguridad'],
@@ -401,6 +403,7 @@ export function Admin() {
         )}
         <fieldset disabled={busy} className="workspace-fieldset">
           {tab === 'catalog' && <CatalogAdmin run={run} report={setError} />}{' '}
+          {tab === 'promotions' && <PromotionsAdmin run={run} />}
           {tab === 'inventory' && (
             <InventoryAdmin
               run={run}
@@ -877,6 +880,139 @@ type Bulk = {
   gramsPerBag: string;
   version: number;
 };
+function PromotionsAdmin({ run }: { run: Run }) {
+  const [items, setItems] = useState<Promotion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [formKey, setFormKey] = useState(0);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setItems(await api<Promotion[]>('/admin/promotions'));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const change = async (item: Promotion, remove = false) => {
+    try {
+      await run(
+        '/admin/promotions/' + item.id,
+        {
+          expectedVersion: item.version,
+          ...(!remove ? { active: !item.active } : {}),
+        },
+        remove ? 'DELETE' : 'PATCH',
+      );
+      setDeleting(null);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  return (
+    <>
+      <h1 className="page-title">Promociones</h1>
+      <section className="panel">
+        <h2>Agregar promoción</h2>
+        <p>
+          Subí la imagen y aparecerá en el carrusel del inicio. Las más
+          recientes se muestran primero.
+        </p>
+        <Form
+          key={formKey}
+          onSubmit={async (f) => {
+            const file = f.get('file');
+            if (!(file instanceof File) || !file.size)
+              throw new Error('Seleccioná una imagen.');
+            if (file.size > 4 * 1024 * 1024)
+              throw new Error('La imagen debe pesar hasta 4 MiB.');
+            await run('/admin/promotions', f);
+            setFormKey((n) => n + 1);
+            await load();
+          }}
+        >
+          <label>
+            Imagen de la promoción
+            <input
+              name="file"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              required
+            />
+          </label>
+          <p className="muted">
+            JPEG, PNG o WebP, hasta 4 MiB. Recomendado: formato horizontal de
+            1200 × 500 px, con el texto incluido en la imagen.
+          </p>
+          <button>Subir promoción</button>
+        </Form>
+      </section>
+      <section className="panel" aria-labelledby="promotions-title">
+        <h2 id="promotions-title">Todas las promociones</h2>
+        {error && (
+          <div role="alert">
+            <p className="error">{error}</p>
+            <button type="button" onClick={load}>
+              Actualizar lista
+            </button>
+          </div>
+        )}
+        {loading ? (
+          <p role="status">Cargando promociones…</p>
+        ) : !error && items.length === 0 ? (
+          <p>Todavía no cargaste promociones.</p>
+        ) : (
+          <div className="promotions-grid">
+            {items.map((item, index) => (
+              <article key={item.id} className="promotion-card">
+                <img
+                  src={media(item.imageKey)}
+                  width={item.width}
+                  height={item.height}
+                  alt={`Promoción ${index + 1}`}
+                />
+                <p>
+                  <strong>Promoción {index + 1}</strong> ·{' '}
+                  {item.active ? 'Habilitada' : 'Deshabilitada'}
+                </p>
+                <div className="promotion-actions">
+                  <button type="button" onClick={() => change(item)}>
+                    {item.active ? 'Deshabilitar' : 'Habilitar'}
+                  </button>
+                  <button type="button" onClick={() => setDeleting(item.id)}>
+                    Eliminar
+                  </button>
+                </div>
+                {deleting === item.id && (
+                  <div role="group" aria-label="Confirmar eliminación">
+                    <p>
+                      ¿Eliminar esta promoción? Para volver a usarla tendrás que
+                      subir su imagen otra vez.
+                    </p>
+                    <button type="button" onClick={() => change(item, true)}>
+                      Confirmar eliminación
+                    </button>{' '}
+                    <button type="button" onClick={() => setDeleting(null)}>
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
+
 function InventoryAdmin({
   run,
   report,

@@ -224,6 +224,133 @@ describe.skipIf(!connectionString)(
           .status,
       ).toBe(422);
     });
+    it('manages promotion uploads, visibility, replay and deletion with protected access', async () => {
+      const bytes = await sharp({
+        create: {
+          width: 1200,
+          height: 500,
+          channels: 3,
+          background: '#c7050e',
+        },
+      })
+        .png()
+        .toBuffer();
+      const upload = async (
+        key,
+        overrides = {},
+        content = bytes,
+        type = 'image/png',
+      ) => {
+        const form = new FormData();
+        form.append('file', new Blob([content], { type }), 'promotion.png');
+        const response = await fetch(base + '/api/v1/admin/promotions', {
+          method: 'POST',
+          headers: {
+            Origin: origin,
+            Cookie: cookie,
+            'X-CSRF-Token': csrf,
+            'X-Operation-Epoch': epoch,
+            'Idempotency-Key': key,
+            ...overrides,
+          },
+          body: form,
+        });
+        return { status: response.status, body: await response.json() };
+      };
+      expect(
+        (await request('/admin/promotions', undefined, { Cookie: '' })).status,
+      ).toBe(401);
+      expect((await upload(randomUUID(), { Cookie: '' })).status).toBe(401);
+      expect(
+        (await upload(randomUUID(), { 'X-CSRF-Token': 'wrong' })).status,
+      ).toBe(403);
+      expect(
+        (await upload(randomUUID(), {}, Buffer.from('not an image'))).body.code,
+      ).toBe('IMAGE_INVALID');
+      const key = randomUUID();
+      const created = await upload(key);
+      expect(created.status).toBe(200);
+      const promo = created.body;
+      expect(promo.active).toBe(true);
+      expect((await upload(key)).body.id).toBe(promo.id);
+      expect((await request('/admin/promotions')).body).toHaveLength(1);
+      expect(
+        (await request('/promotions', undefined, { Cookie: '' })).body.map(
+          (p) => p.id,
+        ),
+      ).toContain(promo.id);
+      expect(
+        (await fetch(base + '/api/v1/media/' + promo.imageKey)).status,
+      ).toBe(200);
+      const headers = () => ({
+        'X-CSRF-Token': csrf,
+        'X-Operation-Epoch': epoch,
+        'Idempotency-Key': randomUUID(),
+      });
+      expect(
+        (
+          await request(
+            '/admin/promotions/' + promo.id,
+            { active: false, expectedVersion: 1 },
+            headers(),
+            'PATCH',
+          )
+        ).status,
+      ).toBe(200);
+      expect((await request('/promotions')).body).toHaveLength(0);
+      expect((await request('/admin/promotions')).body[0].active).toBe(false);
+      expect(
+        (
+          await request(
+            '/admin/promotions/' + promo.id,
+            { active: true, expectedVersion: 1 },
+            headers(),
+            'PATCH',
+          )
+        ).status,
+      ).toBe(409);
+      expect(
+        (
+          await request(
+            '/admin/promotions/' + promo.id,
+            { active: true, expectedVersion: 2 },
+            headers(),
+            'PATCH',
+          )
+        ).status,
+      ).toBe(200);
+      expect((await request('/promotions')).body).toHaveLength(1);
+      const deletionHeaders = headers();
+      expect(
+        (
+          await request(
+            '/admin/promotions/' + promo.id,
+            { expectedVersion: 3 },
+            deletionHeaders,
+            'DELETE',
+          )
+        ).status,
+      ).toBe(200);
+      expect(
+        (
+          await request(
+            '/admin/promotions/' + promo.id,
+            { expectedVersion: 3 },
+            deletionHeaders,
+            'DELETE',
+          )
+        ).status,
+      ).toBe(200);
+      expect((await request('/admin/promotions')).body).toHaveLength(0);
+      expect((await request('/promotions')).body).toHaveLength(0);
+      const [object] = await connection.db
+        .select()
+        .from(s.mediaObjects)
+        .where(eq(s.mediaObjects.key, promo.imageKey));
+      expect(object.eligibleAt.getTime()).toBeGreaterThan(
+        Date.now() + 6 * 86400000,
+      );
+    });
     it('generates distinct URLs concurrently, replays creation and preserves URLs on rename', async () => {
       const [existing] = await connection.db
         .select()
