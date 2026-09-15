@@ -1,5 +1,9 @@
 # Estado de desarrollo
 
+## ImageKit conectado — 2026-09-15
+
+Variables de ImageKit guardadas en Production de superpet-api y API redesplegada. Prueba remota con archivos temporales: carga de original privado y variante correcta; entrega pública y mediante `/api/v1/media` de SuperPet responden 200; original sin firma responde 403; limpieza de ambos objetos completada. El archivo temporal de credenciales fue eliminado. No se modificaron productos ni stock para esta comprobación. Proveedor gratuito activo durante pruebas; R2 sigue reservado para una decisión posterior.
+
 ## Ajustes administrativos — 2026-09-14
 
 - Usuario seleccionó ImageKit Forever Free para imágenes durante las pruebas, hasta finalizar la ecommerce. Adaptador HTTP sin dependencia adicional; originales privados y tres variantes WebP públicas. Claves `ik-` conservan el proveedor para servir y limpiar archivos sin migrar esquema. API requiere `MEDIA_PROVIDER=imagekit`, `IMAGEKIT_PRIVATE_KEY` y `IMAGEKIT_URL_ENDPOINT`; la clave privada nunca se expone al frontend. R2 queda disponible para una futura migración explícita, sin mover ni borrar archivos automáticamente.
