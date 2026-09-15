@@ -21,6 +21,7 @@ import * as v from '../domain/validation.js';
 import * as s from '../db/schema.js';
 import type { Transaction } from '../db/database.js';
 import { productSlug } from '../domain/product-slug.js';
+import { randomUUID } from 'node:crypto';
 
 @Controller()
 export class CommerceController {
@@ -402,19 +403,29 @@ export class CommerceController {
       'sku.create:' + id,
       input,
       async (tx) => {
-        const [sku] = await tx
-          .insert(s.skus)
-          .values({
-            ...input,
-            productId: id,
-            priceMinor: BigInt(input.priceMinor),
-            netWeightGrams: input.netWeightGrams
-              ? BigInt(input.netWeightGrams)
-              : null,
-          })
-          .returning();
-        await tx.insert(s.stocks).values({ skuId: sku!.id });
-        return sku;
+        for (;;) {
+          const [sku] = await tx
+            .insert(s.skus)
+            .values({
+              ...input,
+              code:
+                input.code ??
+                'SP-' + randomUUID().replaceAll('-', '').toUpperCase(),
+              productId: id,
+              priceMinor: BigInt(input.priceMinor),
+              netWeightGrams: input.netWeightGrams
+                ? BigInt(input.netWeightGrams)
+                : null,
+            })
+            .onConflictDoNothing({ target: s.skus.code })
+            .returning();
+          if (!sku) {
+            ensure(!input.code, 'ALREADY_EXISTS', 409);
+            continue;
+          }
+          await tx.insert(s.stocks).values({ skuId: sku!.id });
+          return sku;
+        }
       },
       true,
       true,

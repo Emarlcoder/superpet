@@ -51,7 +51,10 @@ export const productInput = z.strictObject({
     .refine((v) => new Set(v).size === v.length),
 });
 export const skuInput = z.strictObject({
-  code: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  code: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{1,64}$/)
+    .optional(),
   label: text(160),
   saleUnit: z.enum(['unit', 'kg']),
   priceMinor: positiveMoney,

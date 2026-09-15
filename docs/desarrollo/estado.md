@@ -1,5 +1,9 @@
 # Estado de desarrollo
 
+## SKU automático — 2026-09-15
+
+Crear una presentación genera su SKU en la API (`SP-` y UUID hexadecimal), con restricción única y reintento ante colisión. El formulario no solicita código; los códigos existentes se conservan y la API admite códigos explícitos por compatibilidad. El recibo idempotente conserva el SKU al reintentar. Verificado con 23 pruebas PostgreSQL locales, incluyendo altas simultáneas sin código y replay sin duplicar presentación ni stock.
+
 ## ImageKit conectado — 2026-09-15
 
 Variables de ImageKit guardadas en Production de superpet-api y API redesplegada. Prueba remota con archivos temporales: carga de original privado y variante correcta; entrega pública y mediante `/api/v1/media` de SuperPet responden 200; original sin firma responde 403; limpieza de ambos objetos completada. El archivo temporal de credenciales fue eliminado. No se modificaron productos ni stock para esta comprobación. Proveedor gratuito activo durante pruebas; R2 sigue reservado para una decisión posterior.

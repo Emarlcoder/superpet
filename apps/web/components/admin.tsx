@@ -779,7 +779,6 @@ function CatalogAdmin({
                   onSubmit={(f) =>
                     act(() =>
                       run('/admin/products/' + selected.id + '/skus', {
-                        code: value(f, 'code'),
                         label: value(f, 'label'),
                         saleUnit: value(f, 'unit'),
                         priceMinor: cents(value(f, 'price')),
@@ -788,7 +787,6 @@ function CatalogAdmin({
                     )
                   }
                 >
-                  <Field name="code" label="Código SKU" />
                   <Field name="label" label="Presentación" />
                   <label>
                     Unidad de venta

@@ -289,6 +289,34 @@ describe.skipIf(!connectionString)(
         ).toBe(results[0].body.id);
       }
     });
+    it('generates unique SKUs and replays creation without duplicating stock', async () => {
+      const headers = () => ({
+        'X-CSRF-Token': csrf,
+        'Idempotency-Key': randomUUID(),
+        'X-Operation-Epoch': epoch,
+      });
+      const input = {
+        label: 'Bolsa de prueba',
+        saleUnit: 'unit',
+        priceMinor: '100',
+        netWeightGrams: '3000',
+      };
+      const first = headers();
+      const path = '/admin/products/' + product + '/skus';
+      const results = await Promise.all([
+        request(path, input, first),
+        request(path, input, headers()),
+      ]);
+      expect(results.map((r) => r.status)).toEqual([201, 201]);
+      for (const result of results) {
+        expect(result.body.code).toMatch(/^SP-[A-F0-9]{32}$/);
+        expect(await stock(result.body.id)).toBe(0n);
+      }
+      expect(results[0].body.code).not.toBe(results[1].body.code);
+      const replay = await request(path, input, first);
+      expect(replay.body.id).toBe(results[0].body.id);
+      expect(replay.body.code).toBe(results[0].body.code);
+    });
     it('expired anonymous presessions still cannot log in', async () => {
       const raw = randomBytes(32).toString('base64url');
       const expiredCsrf = randomBytes(32).toString('base64url');
