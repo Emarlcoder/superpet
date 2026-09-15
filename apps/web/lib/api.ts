@@ -80,6 +80,7 @@ export function money(value: string) {
   }).format(Number(value) / 100);
 }
 export function media(key: string) {
+  if (key.startsWith('ik-')) return API + '/media/' + encodeURIComponent(key);
   return process.env.NEXT_PUBLIC_MEDIA_URL
     ? process.env.NEXT_PUBLIC_MEDIA_URL + '/' + key
     : API + '/media/' + key;

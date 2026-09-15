@@ -1,5 +1,11 @@
 # Imágenes y correo de recuperación — definición MVP
 
+## Actualización confirmada — 2026-09-14
+
+El usuario eligió ImageKit Forever Free durante la fase de pruebas, hasta terminar la ecommerce. Esta decisión reemplaza R2 solo para esta etapa. Se conservan validaciones, originales privados, variantes WebP, orden e idempotencia. Las imágenes se guardan en `/superpet/originals` (privadas) y `/superpet/public`; API NestJS realiza las cargas con clave privada en Vercel. No usar funciones AI ni activar planes pagos. Plan consultado: 3 GB de almacenamiento y 20 GB/mes de transferencia, con corte de nuevas cargas/entrega al alcanzar los límites ([ImageKit](https://imagekit.io/plans)). La migración posterior de archivos y referencias debe planificarse; cambiar una variable no traslada imágenes existentes.
+
+Las secciones siguientes describen el diseño original de R2 y se conservan como referencia para la etapa posterior.
+
 Decisiones técnicas delegadas por el usuario el 2026-09-09. Completa P-04 sobre R2 y Resend ya seleccionados. Solo planificación: sin cuentas, secretos, mensajes reales ni despliegue. Los límites siguientes son propios de SuperPet, no límites publicados de los proveedores.
 
 ## Fotos del catálogo

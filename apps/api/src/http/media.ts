@@ -35,6 +35,7 @@ import { DomainError, ensure, json } from '../domain/errors.js';
 import * as s from '../db/schema.js';
 import * as v from '../domain/validation.js';
 import type { Transaction } from '../db/database.js';
+import { putImagekit, deleteImagekit, imagekitUrl } from './imagekit.js';
 
 @Injectable()
 export class MediaGuard implements CanActivate {
@@ -82,7 +83,9 @@ export class MediaController {
       .insert(s.mediaObjects)
       .values({ key, privateFile })
       .onConflictDoNothing();
-    if (process.env.R2_ENDPOINT) {
+    if (key.startsWith('ik-')) {
+      await putImagekit(key, bytes, privateFile);
+    } else if (process.env.R2_ENDPOINT) {
       ensure(
         process.env.R2_ACCESS_KEY &&
           process.env.R2_SECRET_KEY &&
@@ -279,7 +282,11 @@ export class MediaController {
     }
     const job = claim.job!;
     const imageId = job.imageId;
-    const prefix = imageId + '-' + hash.slice(0, 12);
+    const prefix =
+      (process.env.MEDIA_PROVIDER === 'imagekit' ? 'ik-' : '') +
+      imageId +
+      '-' +
+      hash.slice(0, 12);
     const variants: Array<{ key: string; width: number; height: number }> = [];
     const buffers: Array<{ key: string; data: Buffer }> = [];
     for (const size of [320, 640, 1280]) {
@@ -389,6 +396,11 @@ export class MediaController {
     @Param('key') key: string,
     @Res() res: Response,
   ) {
+    if (key.startsWith('ik-')) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.redirect(302, imagekitUrl(key));
+      return;
+    }
     ensure(/^[a-f0-9-]+-(320|640|1280)\.webp$/.test(key), 'NOT_FOUND', 404);
     ensure(!process.env.R2_ENDPOINT, 'NOT_FOUND', 404);
     try {
@@ -561,7 +573,9 @@ export class MediaController {
         )
         .limit(1);
       if (referenced.length) continue;
-      if (process.env.R2_ENDPOINT) {
+      if (object.key.startsWith('ik-')) {
+        await deleteImagekit(object.key, object.privateFile);
+      } else if (process.env.R2_ENDPOINT) {
         ensure(
           process.env.R2_ACCESS_KEY && process.env.R2_SECRET_KEY,
           'MEDIA_NOT_CONFIGURED',

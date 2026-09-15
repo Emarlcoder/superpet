@@ -2,6 +2,8 @@
 
 ## Ajustes administrativos — 2026-09-14
 
+- Usuario seleccionó ImageKit Forever Free para imágenes durante las pruebas, hasta finalizar la ecommerce. Adaptador HTTP sin dependencia adicional; originales privados y tres variantes WebP públicas. Claves `ik-` conservan el proveedor para servir y limpiar archivos sin migrar esquema. API requiere `MEDIA_PROVIDER=imagekit`, `IMAGEKIT_PRIVATE_KEY` y `IMAGEKIT_URL_ENDPOINT`; la clave privada nunca se expone al frontend. R2 queda disponible para una futura migración explícita, sin mover ni borrar archivos automáticamente.
+
 - Fotos más visibles en la edición de productos, antes de presentaciones/publicación. Crear un producto abre su edición automáticamente para agregar imágenes. El almacenamiento remoto R2 sigue pendiente de configuración y prueba real; la interfaz informa esa falta explícitamente.
 
 - El producto genera su URL desde el nombre al crearse: minúsculas sin tildes y palabras separadas por guiones. Colisiones resueltas con sufijos numéricos mediante la restricción única de PostgreSQL, incluso con creaciones simultáneas. Editar el nombre sin enviar slug conserva los enlaces existentes. El panel ya no pide identificador de URL; API mantiene slug opcional por compatibilidad.
