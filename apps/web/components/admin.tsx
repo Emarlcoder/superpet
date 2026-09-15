@@ -402,7 +402,11 @@ export function Admin() {
         <fieldset disabled={busy} className="workspace-fieldset">
           {tab === 'catalog' && <CatalogAdmin run={run} report={setError} />}{' '}
           {tab === 'inventory' && (
-            <InventoryAdmin run={run} report={setError} />
+            <InventoryAdmin
+              run={run}
+              report={setError}
+              openCatalog={() => setTab('catalog')}
+            />
           )}{' '}
           {tab === 'purchases' && (
             <PurchasesAdmin run={run} report={setError} />
@@ -876,21 +880,33 @@ type Bulk = {
 function InventoryAdmin({
   run,
   report,
+  openCatalog,
 }: {
   run: Run;
   report: (s: string) => void;
+  openCatalog: () => void;
 }) {
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(
+    'loading',
+  );
   const [rows, setRows] = useState<StockRow[]>([]),
     [bulk, setBulk] = useState<Bulk[]>([]),
     [selected, setSelected] = useState(''),
     [history, setHistory] = useState<unknown[]>([]);
   const load = useCallback(async () => {
-    const [r, b] = await Promise.all([
-      api<StockRow[]>('/admin/stock'),
-      api<Bulk[]>('/admin/bulk-configs'),
-    ]);
-    setRows(r);
-    setBulk(b);
+    setLoadState('loading');
+    try {
+      const [r, b] = await Promise.all([
+        api<StockRow[]>('/admin/stock'),
+        api<Bulk[]>('/admin/bulk-configs'),
+      ]);
+      setRows(r);
+      setBulk(b);
+      setLoadState('ready');
+    } catch (error) {
+      setLoadState('error');
+      throw error;
+    }
   }, []);
   useEffect(() => {
     load().catch((e) => report(e.message));
@@ -904,6 +920,7 @@ function InventoryAdmin({
     }
   };
   const row = rows.find((r) => r.sku.id === selected);
+  const activeBulk = bulk.filter((b) => b.active);
   return (
     <>
       <h1 className="page-title">Inventario</h1>
@@ -1080,43 +1097,69 @@ function InventoryAdmin({
           Registrá la apertura física: descuenta bolsas y suma gramos al
           alimento vinculado.
         </p>
-        <Form
-          onSubmit={(f) =>
-            act(() => {
-              const config = bulk.find((b) => b.id === value(f, 'config'));
-              if (!config)
-                throw new Error('Seleccioná una relación de fraccionamiento.');
-              return run('/admin/bag-openings', {
-                configId: config.id,
-                expectedConfigVersion: config.version,
-                bagCount: Number(value(f, 'count')),
-              });
-            })
-          }
-        >
-          <label>
-            Bolsa y alimento
-            <select name="config" required>
-              <option value="">Seleccionar</option>
-              {bulk
-                .filter((b) => b.active)
-                .map((b) => (
+        {loadState === 'loading' ? (
+          <p role="status">Cargando bolsas disponibles…</p>
+        ) : loadState === 'error' ? (
+          <div role="alert">
+            <p>No se pudieron cargar las bolsas disponibles.</p>
+            <button
+              type="button"
+              onClick={() => load().catch((e) => report(e.message))}
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : activeBulk.length === 0 ? (
+          <div>
+            <p>No hay productos habilitados para vender por kilo suelto.</p>
+            <p>
+              En Catálogo, editá el producto, activá «También se vende por kilo
+              suelto», completá el precio por kilo y el peso de la bolsa, y
+              guardá los cambios. Después aparecerá aquí.
+            </p>
+            <button type="button" onClick={openCatalog}>
+              Ir al catálogo
+            </button>
+          </div>
+        ) : (
+          <Form
+            onSubmit={(f) =>
+              act(() => {
+                const config = bulk.find((b) => b.id === value(f, 'config'));
+                if (!config)
+                  throw new Error(
+                    'Seleccioná una relación de fraccionamiento.',
+                  );
+                return run('/admin/bag-openings', {
+                  configId: config.id,
+                  expectedConfigVersion: config.version,
+                  bagCount: Number(value(f, 'count')),
+                });
+              })
+            }
+          >
+            <label>
+              Bolsa y alimento
+              <select name="config" required>
+                <option value="">Seleccionar</option>
+                {activeBulk.map((b) => (
                   <option key={b.id} value={b.id}>
                     {rows.find((r) => r.sku.id === b.sourceSkuId)?.product} —{' '}
                     {rows.find((r) => r.sku.id === b.sourceSkuId)?.sku.label} (
                     {b.gramsPerBag} g)
                   </option>
                 ))}
-            </select>
-          </label>
-          <Field
-            name="count"
-            label="Cantidad de bolsas"
-            type="number"
-            defaultValue="1"
-          />
-          <button>Registrar apertura</button>
-        </Form>
+              </select>
+            </label>
+            <Field
+              name="count"
+              label="Cantidad de bolsas"
+              type="number"
+              defaultValue="1"
+            />
+            <button>Registrar apertura</button>
+          </Form>
+        )}
       </section>
     </>
   );
