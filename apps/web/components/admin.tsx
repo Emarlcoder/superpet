@@ -962,7 +962,10 @@ function InventoryAdmin({
                 return mode === 'initial' || mode === 'receipt'
                   ? run('/admin/inventory/receipts', {
                       kind: mode,
-                      reason: value(f, 'reason'),
+                      reason:
+                        mode === 'initial'
+                          ? 'Stock inicial'
+                          : 'Reposición de unidades',
                       lines: [
                         {
                           skuId: row.sku.id,
@@ -976,7 +979,10 @@ function InventoryAdmin({
                       expectedVersion: row.stock.version,
                       mode,
                       quantity: value(f, 'quantity'),
-                      reason: value(f, 'reason'),
+                      reason:
+                        mode === 'count'
+                          ? 'Conteo físico'
+                          : 'Ajuste de diferencia',
                     });
               })
             }
@@ -1000,7 +1006,6 @@ function InventoryAdmin({
               }
               type="number"
             />
-            <Field name="reason" label="Motivo" />
             <button>Registrar movimiento</button>
           </Form>
           <details>
