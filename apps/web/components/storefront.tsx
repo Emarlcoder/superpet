@@ -251,20 +251,15 @@ export function Catalog() {
                   )}
                   <h2>{p.name}</h2>
                   <p>
-                    {p.skus.length
-                      ? 'Desde ' +
-                        money(
-                          String(
-                            Math.min(
-                              ...p.skus.map((s) => Number(s.priceMinor)),
-                            ),
-                          ),
-                        )
-                      : 'Sin presentaciones disponibles'}
+                    {p.skus.find((s) => s.saleUnit === 'unit')
+                      ? money(
+                          p.skus.find((s) => s.saleUnit === 'unit')!.priceMinor,
+                        ) + ' por bolsa / unidad'
+                      : 'No disponible'}
                   </p>
                   <span>
                     {p.skus.some((s) => s.maxSelectable > 0)
-                      ? 'Ver presentaciones'
+                      ? 'Ver producto'
                       : 'Agotado'}
                   </span>
                 </Link>
@@ -298,7 +293,9 @@ export function ProductDetail({ slug }: { slug: string }) {
     api<Product>('/products/' + encodeURIComponent(slug))
       .then((p) => {
         setProduct(p);
-        setSelected(p.skus[0]?.id ?? '');
+        setSelected(
+          p.skus.find((s) => s.saleUnit === 'unit')?.id ?? p.skus[0]?.id ?? '',
+        );
       })
       .catch((e) => setError(e.message));
   }, [slug]);
@@ -343,23 +340,25 @@ export function ProductDetail({ slug }: { slug: string }) {
         <Link href="/productos">Volver al catálogo</Link>
         <h1 className="page-title">{product.name}</h1>
         <p className="description">{product.description}</p>
-        <label>
-          Presentación
-          <select
-            value={selected}
-            onChange={(e) => {
-              setSelected(e.target.value);
-              setQuantity(1);
-              setNotice('');
-            }}
-          >
-            {product.skus.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {product.skus.length > 1 && (
+          <label>
+            Cómo lo querés comprar
+            <select
+              value={selected}
+              onChange={(e) => {
+                setSelected(e.target.value);
+                setQuantity(1);
+                setNotice('');
+              }}
+            >
+              {product.skus.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {sku && (
           <>
             <p className="price">

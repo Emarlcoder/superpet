@@ -1,5 +1,11 @@
 # Estado de desarrollo
 
+## Publicaciones y venta suelta — 2026-09-15
+
+Cada tamaño de bolsa/artículo se carga como publicación independiente con fotos y descripción propias. El formulario incluye precio por bolsa/unidad y switch «También se vende por kilo suelto»; al activarlo requiere precio/kg y peso de bolsa en kg (hasta tres decimales). Guardado atómico de producto, precios, SKU internos, stock inicial cero y vínculo de apertura. No hay alta manual de presentaciones ni relaciones en Inventario. Activar/desactivar suelto preserva SKU, stock e historial; abrir bolsas sigue siendo una acción física explícita. Catálogo muestra y ordena por precio de bolsa/unidad, con compra por kilo opcional en ficha.
+
+El catálogo remoto revisado tenía un borrador sin SKU; no requirió separación. Registros antiguos con más de una bolsa se bloquean para revisión explícita antes de usar el formulario simplificado; no se eliminan ni se reasigna stock automáticamente.
+
 ## SKU automático — 2026-09-15
 
 Crear una presentación genera su SKU en la API (`SP-` y UUID hexadecimal), con restricción única y reintento ante colisión. El formulario no solicita código; los códigos existentes se conservan y la API admite códigos explícitos por compatibilidad. El recibo idempotente conserva el SKU al reintentar. Verificado con 23 pruebas PostgreSQL locales, incluyendo altas simultáneas sin código y replay sin duplicar presentación ni stock.

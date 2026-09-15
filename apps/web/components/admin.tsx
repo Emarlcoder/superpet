@@ -447,6 +447,72 @@ export function Admin() {
   );
 }
 
+const grams = (value: string) => {
+  if (!/^\d+(?:[.,]\d{1,3})?$/.test(value))
+    throw new Error('Ingresá el peso en kilos, con hasta tres decimales.');
+  const [whole, fraction = ''] = value.replace(',', '.').split('.');
+  return (BigInt(whole!) * 1000n + BigInt(fraction.padEnd(3, '0'))).toString();
+};
+
+function ProductSalesFields({ product }: { product: Product | null }) {
+  const unit = product?.skus.find((s) => s.saleUnit === 'unit');
+  const loose = product?.skus.find((s) => s.saleUnit === 'kg');
+  const [enabled, setEnabled] = useState(loose?.active ?? false);
+  if ((product?.skus.filter((s) => s.saleUnit === 'unit').length ?? 0) > 1)
+    return (
+      <p role="alert" className="error">
+        Este producto tiene varias bolsas cargadas. Hay que separarlas en
+        publicaciones antes de usar la carga simplificada, conservando su stock
+        e historial.
+      </p>
+    );
+  return (
+    <>
+      <PriceField
+        name="unitPrice"
+        label="Precio por bolsa / unidad (UYU)"
+        minor={unit?.priceMinor ?? ''}
+      />
+      <label>
+        <input
+          type="checkbox"
+          role="switch"
+          name="looseEnabled"
+          checked={enabled}
+          onChange={(e) => setEnabled(e.target.checked)}
+        />
+        También se vende por kilo suelto
+      </label>
+      {enabled && (
+        <>
+          <PriceField
+            name="kiloPrice"
+            label="Precio por kilo (UYU)"
+            minor={loose?.priceMinor ?? ''}
+          />
+          <label>
+            Peso de la bolsa (kg)
+            <input
+              name="bagWeight"
+              type="number"
+              min="0.001"
+              step="0.001"
+              required
+              defaultValue={
+                unit?.netWeightGrams ? Number(unit.netWeightGrams) / 1000 : ''
+              }
+            />
+          </label>
+          <p>
+            La venta suelta es de 1 a 5 kg. Registrá la apertura de bolsas desde
+            Inventario para disponer de stock suelto.
+          </p>
+        </>
+      )}
+    </>
+  );
+}
+
 function CatalogAdmin({
   run,
   report,
@@ -501,7 +567,9 @@ function CatalogAdmin({
                   : p.status === 'draft'
                     ? 'Borrador'
                     : 'Archivado'}{' '}
-                · {p.skus.length} presentaciones
+                {p.skus.some((s) => s.saleUnit === 'kg' && s.active)
+                  ? '· También por kilo'
+                  : ''}
               </span>
             </button>
           ))}
@@ -518,6 +586,19 @@ function CatalogAdmin({
                   categoryId: value(f, 'category'),
                   brandId: value(f, 'brand') || null,
                   species: f.getAll('species'),
+                  sales: {
+                    unitPriceMinor: cents(value(f, 'unitPrice')),
+                    looseEnabled: f.get('looseEnabled') === 'on',
+                    kiloPriceMinor:
+                      f.get('looseEnabled') === 'on'
+                        ? cents(value(f, 'kiloPrice'))
+                        : null,
+                    bagWeightGrams:
+                      f.get('looseEnabled') === 'on'
+                        ? grams(value(f, 'bagWeight'))
+                        : (selected?.skus.find((s) => s.saleUnit === 'unit')
+                            ?.netWeightGrams ?? null),
+                  },
                   ...(selected ? { expectedVersion: selected.version } : {}),
                 },
                 selected ? 'PATCH' : 'POST',
@@ -582,14 +663,23 @@ function CatalogAdmin({
                 Gatos
               </label>
             </div>
-            <button>
+            <ProductSalesFields
+              key={selected?.id ?? 'new'}
+              product={selected}
+            />
+            <button
+              disabled={
+                (selected?.skus.filter((s) => s.saleUnit === 'unit').length ??
+                  0) > 1
+              }
+            >
               {selected ? 'Guardar producto' : 'Guardar y agregar fotos'}
             </button>
           </Form>
           {!selected && (
             <p>
-              Guardá los datos del producto para agregar sus fotos y
-              presentaciones.
+              Guardá el producto para agregar sus fotos. Para otro tamaño de
+              bolsa, creá una publicación nueva.
             </p>
           )}
           {selected && (
@@ -733,78 +823,6 @@ function CatalogAdmin({
                   Archivar
                 </button>
               </div>
-              <h3>Presentaciones</h3>
-              {selected.skus.map((s) => (
-                <Form
-                  key={s.id + ':' + s.version}
-                  onSubmit={(f) =>
-                    act(() =>
-                      run(
-                        '/admin/skus/' + s.id,
-                        {
-                          label: value(f, 'label'),
-                          priceMinor: cents(value(f, 'price')),
-                          active: f.get('active') === 'on',
-                          expectedVersion: s.version,
-                        },
-                        'PATCH',
-                      ),
-                    )
-                  }
-                >
-                  <Field
-                    name="label"
-                    label="Presentación"
-                    defaultValue={s.label}
-                  />
-                  <PriceField
-                    name="price"
-                    label="Precio en pesos uruguayos"
-                    minor={s.priceMinor}
-                  />
-                  <label>
-                    <input
-                      type="checkbox"
-                      name="active"
-                      defaultChecked={s.active}
-                    />
-                    Activa
-                  </label>
-                  <button className="secondary">Guardar presentación</button>
-                </Form>
-              ))}
-              <details>
-                <summary>Agregar presentación</summary>
-                <Form
-                  onSubmit={(f) =>
-                    act(() =>
-                      run('/admin/products/' + selected.id + '/skus', {
-                        label: value(f, 'label'),
-                        saleUnit: value(f, 'unit'),
-                        priceMinor: cents(value(f, 'price')),
-                        netWeightGrams: value(f, 'weight') || null,
-                      }),
-                    )
-                  }
-                >
-                  <Field name="label" label="Presentación" />
-                  <label>
-                    Unidad de venta
-                    <select name="unit">
-                      <option value="unit">Unidad / bolsa cerrada</option>
-                      <option value="kg">Kilo suelto</option>
-                    </select>
-                  </label>
-                  <PriceField name="price" label="Precio en pesos uruguayos" />
-                  <Field
-                    name="weight"
-                    label="Peso de bolsa en gramos (opcional)"
-                    type="number"
-                    required={false}
-                  />
-                  <button>Agregar presentación</button>
-                </Form>
-              </details>
             </>
           )}
         </section>
@@ -1053,30 +1071,6 @@ function InventoryAdmin({
       )}
       <section className="panel">
         <h2>Abrir bolsas para venta suelta</h2>
-        <details>
-          <summary>Relaciones de fraccionamiento</summary>
-          {bulk.map((b) => (
-            <p key={b.id}>
-              {rows.find((r) => r.sku.id === b.sourceSkuId)?.sku.label} →{' '}
-              {rows.find((r) => r.sku.id === b.targetSkuId)?.sku.label} ·{' '}
-              {b.gramsPerBag} g{' '}
-              <button
-                className="secondary"
-                onClick={() =>
-                  act(() =>
-                    run(
-                      '/admin/bulk-configs/' + b.id,
-                      { active: !b.active, expectedVersion: b.version },
-                      'PATCH',
-                    ),
-                  )
-                }
-              >
-                {b.active ? 'Desactivar' : 'Activar'}
-              </button>
-            </p>
-          ))}
-        </details>
         <p>
           Registrá la apertura física: descuenta bolsas y suma gramos al
           alimento vinculado.
@@ -1118,51 +1112,6 @@ function InventoryAdmin({
           />
           <button>Registrar apertura</button>
         </Form>
-        <details>
-          <summary>Vincular una bolsa con alimento suelto</summary>
-          <Form
-            onSubmit={(f) =>
-              act(() => {
-                const source = rows.find(
-                  (r) => r.sku.id === value(f, 'source'),
-                );
-                return run('/admin/bulk-configs', {
-                  sourceSkuId: value(f, 'source'),
-                  targetSkuId: value(f, 'target'),
-                  gramsPerBag: source?.sku.netWeightGrams ?? '0',
-                });
-              })
-            }
-          >
-            <label>
-              Bolsa cerrada
-              <select name="source">
-                {rows
-                  .filter(
-                    (r) => r.sku.saleUnit === 'unit' && r.sku.netWeightGrams,
-                  )
-                  .map((r) => (
-                    <option key={r.sku.id} value={r.sku.id}>
-                      {r.product} — {r.sku.label}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label>
-              Alimento suelto del mismo producto
-              <select name="target">
-                {rows
-                  .filter((r) => r.sku.saleUnit === 'kg')
-                  .map((r) => (
-                    <option key={r.sku.id} value={r.sku.id}>
-                      {r.product} — {r.sku.label}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <button>Guardar relación</button>
-          </Form>
-        </details>
       </section>
     </>
   );

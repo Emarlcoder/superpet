@@ -1,5 +1,7 @@
 # Pantallas y recorridos de SuperPet
 
+Actualización confirmada 2026-09-15: la carga administrativa usa una publicación por bolsa/tamaño o artículo, con fotos y descripción propias. Precio de bolsa/unidad obligatorio; switch de venta por kilo con precio/kg y peso de bolsa. SKU y relación de apertura se generan internamente. Ya no se muestran formularios de presentaciones ni vínculos de fraccionamiento; Inventario conserva la apertura explícita. Las referencias históricas a múltiples presentaciones dentro de una publicación quedan reemplazadas por este flujo.
+
 Estado: propuesta de estructura funcional basada en requisitos confirmados. No es diseño visual aprobado ni implementación. Rutas, distribución y componentes son propuestas.
 
 ## Navegación pública

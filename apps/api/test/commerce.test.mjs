@@ -317,6 +317,133 @@ describe.skipIf(!connectionString)(
       expect(replay.body.id).toBe(results[0].body.id);
       expect(replay.body.code).toBe(results[0].body.code);
     });
+    it('saves a listing and its prices atomically, with automatic loose-food setup and preserved stock', async () => {
+      const [existing] = await connection.db
+        .select()
+        .from(s.products)
+        .where(eq(s.products.id, product));
+      const headers = () => ({
+        'X-CSRF-Token': csrf,
+        'Idempotency-Key': randomUUID(),
+        'X-Operation-Epoch': epoch,
+      });
+      const input = {
+        name: 'Publicación bolsa de 3 kg',
+        description: 'Una sola bolsa',
+        categoryId: existing.categoryId,
+        brandId: null,
+        species: ['dog'],
+        sales: {
+          unitPriceMinor: '50000',
+          looseEnabled: true,
+          kiloPriceMinor: '20000',
+          bagWeightGrams: '3000',
+        },
+      };
+      const first = headers();
+      const created = await request('/admin/products', input, first);
+      expect(created.status).toBe(201);
+      expect((await request('/admin/products', input, first)).body.id).toBe(
+        created.body.id,
+      );
+      const rows = await connection.db
+        .select()
+        .from(s.skus)
+        .where(eq(s.skus.productId, created.body.id));
+      expect(rows).toHaveLength(2);
+      const unit = rows.find((r) => r.saleUnit === 'unit'),
+        loose = rows.find((r) => r.saleUnit === 'kg');
+      expect(unit.priceMinor).toBe(50000n);
+      expect(loose.priceMinor).toBe(20000n);
+      const [config] = await connection.db
+        .select()
+        .from(s.bulkConfigs)
+        .where(eq(s.bulkConfigs.sourceSkuId, unit.id));
+      expect(config.gramsPerBag).toBe(3000n);
+      await connection.db
+        .update(s.stocks)
+        .set({ quantity: 2n })
+        .where(eq(s.stocks.skuId, unit.id));
+      const opening = await request(
+        '/admin/bag-openings',
+        {
+          configId: config.id,
+          expectedConfigVersion: config.version,
+          bagCount: 1,
+        },
+        headers(),
+      );
+      expect(opening.status).toBe(200);
+      expect(await stock(unit.id)).toBe(1n);
+      expect(await stock(loose.id)).toBe(3000n);
+      const path = '/admin/products/' + created.body.id;
+      const off = {
+        ...input,
+        expectedVersion: created.body.version,
+        sales: { ...input.sales, looseEnabled: false, kiloPriceMinor: null },
+      };
+      const changed = await request(path, off, headers(), 'PATCH');
+      expect(changed.status).toBe(200);
+      const [disabled] = await connection.db
+        .select()
+        .from(s.skus)
+        .where(eq(s.skus.id, loose.id));
+      expect(disabled.active).toBe(false);
+      expect(await stock(loose.id)).toBe(3000n);
+      expect((await request(path, off, headers(), 'PATCH')).status).toBe(409);
+      const on = await request(
+        path,
+        { ...input, expectedVersion: changed.body.version },
+        headers(),
+        'PATCH',
+      );
+      expect(on.status).toBe(200);
+      const after = await connection.db
+        .select()
+        .from(s.skus)
+        .where(eq(s.skus.productId, created.body.id));
+      expect(after.map((r) => r.id).sort()).toEqual(
+        rows.map((r) => r.id).sort(),
+      );
+      expect(await stock(loose.id)).toBe(3000n);
+      const invalid = await request(
+        '/admin/products',
+        {
+          ...input,
+          name: 'Peso inválido',
+          sales: { ...input.sales, bagWeightGrams: null },
+        },
+        headers(),
+      );
+      expect(invalid.status).toBe(422);
+      expect(
+        await connection.db
+          .select()
+          .from(s.products)
+          .where(eq(s.products.name, 'Peso inválido')),
+      ).toHaveLength(0);
+      const plain = await request(
+        '/admin/products',
+        {
+          ...input,
+          name: 'Accesorio por unidad',
+          sales: {
+            unitPriceMinor: '10000',
+            looseEnabled: false,
+            kiloPriceMinor: null,
+            bagWeightGrams: null,
+          },
+        },
+        headers(),
+      );
+      expect(plain.status).toBe(201);
+      expect(
+        await connection.db
+          .select()
+          .from(s.skus)
+          .where(eq(s.skus.productId, plain.body.id)),
+      ).toHaveLength(1);
+    });
     it('expired anonymous presessions still cannot log in', async () => {
       const raw = randomBytes(32).toString('base64url');
       const expiredCsrf = randomBytes(32).toString('base64url');

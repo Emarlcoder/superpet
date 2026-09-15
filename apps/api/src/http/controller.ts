@@ -22,6 +22,7 @@ import * as s from '../db/schema.js';
 import type { Transaction } from '../db/database.js';
 import { productSlug } from '../domain/product-slug.js';
 import { randomUUID } from 'node:crypto';
+import { configureProductSales } from '../domain/product-sales.js';
 
 @Controller()
 export class CommerceController {
@@ -86,9 +87,9 @@ export class CommerceController {
     if (q.sort?.startsWith('price'))
       items.sort((a, b) => {
         const price = (p: typeof a) =>
-          p.skus.length
-            ? Math.min(...p.skus.map((s) => Number(s.priceMinor)))
-            : Infinity;
+          Number(
+            p.skus.find((s) => s.saleUnit === 'unit')?.priceMinor ?? Infinity,
+          );
         return (
           (price(a) - price(b)) * (q.sort === 'price_desc' ? -1 : 1) ||
           a.id.localeCompare(b.id)
@@ -262,21 +263,26 @@ export class CommerceController {
       'product.create',
       input,
       async (tx) => {
+        const { sales, ...data } = input;
         await this.validateTaxonomy(tx, input.categoryId, input.brandId);
         if (input.slug) {
           const [p] = await tx
             .insert(s.products)
-            .values({ ...input, slug: input.slug })
+            .values({ ...data, slug: input.slug })
             .returning();
+          if (sales) await configureProductSales(tx, p!.id, sales);
           return p;
         }
         for (let sequence = 1; ; sequence++) {
           const [p] = await tx
             .insert(s.products)
-            .values({ ...input, slug: productSlug(input.name, sequence) })
+            .values({ ...data, slug: productSlug(input.name, sequence) })
             .onConflictDoNothing({ target: s.products.slug })
             .returning();
-          if (p) return p;
+          if (p) {
+            if (sales) await configureProductSales(tx, p.id, sales);
+            return p;
+          }
         }
       },
       true,
@@ -319,7 +325,7 @@ export class CommerceController {
       .parse(body);
     return this.command(req, res, 'product.edit:' + id, input, async (tx) => {
       await this.validateTaxonomy(tx, input.categoryId, input.brandId);
-      const { expectedVersion, ...data } = input;
+      const { expectedVersion, sales, ...data } = input;
       const [p] = await tx
         .update(s.products)
         .set({ ...data, version: expectedVersion + 1 })
@@ -328,6 +334,7 @@ export class CommerceController {
         )
         .returning();
       ensure(p, 'VERSION_CONFLICT');
+      if (sales) await configureProductSales(tx, p.id, sales);
       return p;
     });
   }

@@ -34,7 +34,21 @@ export const items = z
   .max(50);
 export const quoteInput = z.strictObject({ items, deliveryMode });
 export const purchaseInput = quoteInput.extend({ quoteId: id, customer });
+export const productSales = z
+  .strictObject({
+    unitPriceMinor: positiveMoney,
+    looseEnabled: z.boolean(),
+    kiloPriceMinor: positiveMoney.nullable(),
+    bagWeightGrams: money.refine((v) => BigInt(v) > 0n).nullable(),
+  })
+  .refine(
+    (v) =>
+      !v.looseEnabled ||
+      (v.kiloPriceMinor !== null && v.bagWeightGrams !== null),
+    'Indicá precio por kilo y peso de bolsa',
+  );
 export const productInput = z.strictObject({
+  sales: productSales.optional(),
   name: text(160),
   slug: z
     .string()

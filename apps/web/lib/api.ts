@@ -128,7 +128,9 @@ const messages: Record<string, string> = {
   VERSION_CONFLICT: 'Los datos cambiaron. Actualizá y revisá antes de guardar.',
   RATE_LIMITED: 'Demasiados intentos. Esperá un momento antes de continuar.',
   PRODUCT_INCOMPLETE:
-    'Agregá al menos una presentación activa y una foto antes de publicar.',
+    'Guardá el precio de venta y agregá una foto antes de publicar.',
+  PRODUCT_REQUIRES_SPLIT:
+    'Este producto tiene varias bolsas. Separalas en publicaciones antes de usar la carga simplificada.',
   STORE_NOT_CONFIGURED: 'El local todavía no configuró su número de WhatsApp.',
   PASSWORD_POLICY_VIOLATION:
     'Usá una contraseña de 8 a 128 caracteres que no sea común.',

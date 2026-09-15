@@ -496,6 +496,38 @@ input[type='checkbox'] {
   width: 20px;
   min-height: 20px;
 }
+input[role='switch'] {
+  appearance: none;
+  width: 48px;
+  height: 28px;
+  min-height: 28px;
+  padding: 3px;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  background: #e6ecee;
+  cursor: pointer;
+  vertical-align: middle;
+}
+input[role='switch']::before {
+  content: '';
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px #132b3a55;
+}
+input[role='switch']:checked {
+  background: var(--red);
+  border-color: var(--red);
+}
+input[role='switch']:checked::before {
+  transform: translateX(20px);
+}
+input[role='switch']:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
 .photo-grid {
   display: flex;
   flex-wrap: wrap;
