@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { loadCart } from '../lib/cart-storage';
 export function StoreHeader() {
   const [count, setCount] = useState(0);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   useEffect(() => {
     const update = () =>
       setCount(loadCart().reduce((n, l) => n + l.quantity, 0));
@@ -78,14 +79,101 @@ export function StoreHeader() {
           </span>
         </Link>
       </div>
-      <nav className="store-nav" aria-label="Principal">
-        <Link href="/productos">Todos los productos</Link>
-        <Link href="/productos?species=dog">Perros</Link>
-        <Link href="/productos?species=cat">Gatos</Link>
-        <Link href="/#categorias">Categorías</Link>
-        <Link href="/#marcas">Marcas</Link>
-        <Link href="/#promociones">Promociones</Link>
+      <nav className="store-nav" aria-label="Categorías de productos">
+        <Menu
+          label="Perros"
+          open={openMenu === 'dogs'}
+          onOpen={() => setOpenMenu('dogs')}
+          onClose={() => setOpenMenu(null)}
+          items={[
+            ['Alimento seco', '/productos?species=dog&q=Alimento+seco'],
+            ['Alimento húmedo', '/productos?species=dog&q=Alimento+húmedo'],
+            ['Snacks', '/productos?species=dog&q=Snacks'],
+          ]}
+        />
+        <Menu
+          label="Gatos"
+          open={openMenu === 'cats'}
+          onOpen={() => setOpenMenu('cats')}
+          onClose={() => setOpenMenu(null)}
+          items={[
+            ['Alimento seco', '/productos?species=cat&q=Alimento+seco'],
+            ['Alimento húmedo', '/productos?species=cat&q=Alimento+húmedo'],
+            ['Snacks', '/productos?species=cat&q=Snacks'],
+          ]}
+        />
+        <Menu
+          label="Cuidado e higiene"
+          open={openMenu === 'care'}
+          onOpen={() => setOpenMenu('care')}
+          onClose={() => setOpenMenu(null)}
+          items={[
+            ['Piedras y arenas', '/productos?q=Piedras+y+arenas'],
+            ['Pañales', '/productos?q=Pañales'],
+            ['Perfumes', '/productos?q=Perfumes'],
+            ['Cepillos', '/productos?q=Cepillos'],
+            ['Shampoos', '/productos?q=Shampoos'],
+            ['Bolsas', '/productos?q=Bolsas'],
+          ]}
+        />
+        <Menu
+          label="Accesorios y juguetes"
+          open={openMenu === 'accessories'}
+          onOpen={() => setOpenMenu('accessories')}
+          onClose={() => setOpenMenu(null)}
+          items={[
+            ['Transportadoras', '/productos?q=Transportadoras'],
+            [
+              'Collares, correas y arneses',
+              '/productos?q=Collares%2C+correas+y+arneses',
+            ],
+            ['Juguetes', '/productos?q=Juguetes'],
+            ['Camas', '/productos?q=Camas'],
+            ['Rascadores', '/productos?q=Rascadores'],
+            ['Comederos', '/productos?q=Comederos'],
+            ['Ropa', '/productos?q=Ropa'],
+          ]}
+        />
       </nav>
     </header>
+  );
+}
+
+function Menu({
+  label,
+  items,
+  open,
+  onOpen,
+  onClose,
+}: {
+  label: string;
+  items: Array<[string, string]>;
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="store-nav-menu">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="true"
+        onClick={() => (open ? onClose() : onOpen())}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') onClose();
+        }}
+      >
+        {label}
+      </button>
+      {open && (
+        <div className="store-nav-panel" role="menu" aria-label={label}>
+          {items.map(([name, href]) => (
+            <Link key={name} href={href} role="menuitem" onClick={onClose}>
+              {name}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

@@ -786,20 +786,95 @@ summary {
 .store-nav {
   display: flex;
   justify-content: center;
-  gap: 2.8rem;
+  gap: 1.4rem;
   background: #fff;
   color: var(--ink);
   border-bottom: 1px solid #e4e4e4;
-  padding: 1rem;
+  padding: 0 1rem;
+  position: relative;
+  z-index: 20;
 }
-.store-nav a {
-  text-decoration: none;
+.store-nav-menu {
+  position: relative;
+}
+.store-nav-menu > button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
   font-size: 0.93rem;
   font-weight: bold;
+  padding: 1rem 0.75rem;
   white-space: nowrap;
 }
-.store-nav a:hover {
+.store-nav-menu > button::after {
+  content: '⌄';
   color: var(--red);
+  font-size: 0.85em;
+  margin-left: 0.45rem;
+}
+.store-nav-menu > button:hover,
+.store-nav-menu > button:focus-visible {
+  color: var(--red);
+  outline: none;
+}
+.store-nav-panel {
+  position: absolute;
+  top: calc(100% - 0.25rem);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  min-width: 13rem;
+  max-width: min(22rem, calc(100vw - 2rem));
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.6rem;
+  background: #fff;
+  border: 1px solid #e4e4e4;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 10px 20px rgb(0 0 0 / 12%);
+}
+.store-nav-panel a {
+  border-radius: 6px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.65rem 0.75rem;
+}
+.store-nav-panel a:hover,
+.store-nav-panel a:focus-visible {
+  background: #f8eded;
+  color: var(--red);
+  outline: none;
+}
+@media (max-width: 800px) {
+  .store-nav {
+    align-items: stretch;
+    display: grid;
+    gap: 0;
+    grid-template-columns: 1fr 1fr;
+    padding: 0;
+  }
+  .store-nav-menu {
+    min-width: 0;
+  }
+  .store-nav-menu > button {
+    font-size: 0.86rem;
+    padding: 0.85rem 0.6rem;
+    width: 100%;
+  }
+  .store-nav-panel {
+    left: 0;
+    max-width: calc(100vw - 2rem);
+    transform: none;
+  }
+  .store-nav-menu:nth-child(even) .store-nav-panel {
+    left: auto;
+    right: 0;
+  }
 }
 .shopping-benefits {
   display: grid;
