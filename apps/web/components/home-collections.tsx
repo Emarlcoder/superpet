@@ -1,12 +1,7 @@
-'use client';
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { api, media, money, type Product } from '../lib/api';
+import { media, money } from '../lib/api';
+import { getFilters, getHomeProducts } from '../lib/public-data';
 
-type Filters = {
-  categories: { id: string; name: string }[];
-  brands: { id: string; name: string }[];
-};
 function CategoryIcon({ name }: { name: string }) {
   const category = name.toLocaleLowerCase();
   return (
@@ -48,34 +43,18 @@ function CategoryIcon({ name }: { name: string }) {
     </svg>
   );
 }
-export function HomeCollections() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filters, setFilters] = useState<Filters>({
-    categories: [],
-    brands: [],
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  useEffect(() => {
-    const controller = new AbortController();
-    Promise.all([
-      api<{ items: Product[] }>('/products?limit=8', {
-        signal: controller.signal,
-      }),
-      api<Filters>('/catalog/filters', { signal: controller.signal }),
-    ])
-      .then(([p, f]) => {
-        setProducts(p.items);
-        setFilters(f);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setError(true);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, []);
+export async function HomeCollections() {
+  const [productResult, filterResult] = await Promise.allSettled([
+    getHomeProducts(),
+    getFilters(),
+  ]);
+  const products =
+    productResult.status === 'fulfilled' ? productResult.value.items : [];
+  const filters =
+    filterResult.status === 'fulfilled'
+      ? filterResult.value
+      : { categories: [], brands: [] };
+  const error = productResult.status === 'rejected';
   return (
     <>
       <section
@@ -125,8 +104,7 @@ export function HomeCollections() {
             </Link>
           ))}
         </div>
-        {loading && <p role="status">Cargando categorías…</p>}
-        {!loading && !filters.categories.length && (
+        {!filters.categories.length && (
           <p>
             Explorá los productos disponibles en nuestro{' '}
             <Link href="/productos">catálogo</Link>.
@@ -141,9 +119,7 @@ export function HomeCollections() {
           <h2 id="products-title">Encontrá su próximo favorito</h2>
           <Link href="/productos">Ver catálogo</Link>
         </div>
-        {loading ? (
-          <p role="status">Cargando productos…</p>
-        ) : error ? (
+        {error ? (
           <p>
             No pudimos cargar los productos.{' '}
             <Link href="/productos">Ir al catálogo</Link>
@@ -166,7 +142,7 @@ export function HomeCollections() {
                 >
                   {photo?.variants[0] && (
                     <img
-                      src={media(photo.variants[0].key)}
+                      src={media(photo.variants[0].key, photo.variants[0].url)}
                       alt={photo.alt}
                       loading="lazy"
                       width="240"
@@ -205,7 +181,7 @@ export function HomeCollections() {
             </Link>
           ))}
         </div>
-        {!loading && !filters.brands.length && (
+        {!filters.brands.length && (
           <p>Consultá las marcas disponibles en el catálogo.</p>
         )}
       </section>

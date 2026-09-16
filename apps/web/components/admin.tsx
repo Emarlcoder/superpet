@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import Link from 'next/link';
+import { refreshPublicContent } from '../app/admin/refresh-public';
 import {
   api,
   ApiError,
@@ -254,6 +255,17 @@ export function Admin() {
             : {}),
         });
         pending.current.delete(signature);
+        if (
+          path.startsWith('/admin/promotions') ||
+          path.startsWith('/admin/taxonomies')
+        ) {
+          // A failed refresh must not turn a committed mutation into a failed save.
+          try {
+            await refreshPublicContent();
+          } catch {
+            /* TTL is the fallback. */
+          }
+        }
         setNotice('Operación guardada.');
         setSession((current) =>
           current

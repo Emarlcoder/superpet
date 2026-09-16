@@ -1,5 +1,7 @@
-import { StoreHeader } from '../components/storefront';
-import { PromotionsCarousel } from '../components/promotions';
+import { StoreHeader } from '../components/store-header';
+
+import { HomePromotions } from '../components/home-promotions';
+import { Suspense } from 'react';
 import { HomeCollections } from '../components/home-collections';
 
 export default function Home() {
@@ -12,7 +14,16 @@ export default function Home() {
       <main id="contenido">
         <h1 className="sr-only">SuperPet — todo para perros y gatos</h1>
         <div id="promociones">
-          <PromotionsCarousel />
+          <Suspense
+            fallback={
+              <div
+                className="promotion-placeholder"
+                aria-label="Cargando promociones"
+              />
+            }
+          >
+            <HomePromotions />
+          </Suspense>
         </div>
         <div className="shopping-benefits">
           <div>
@@ -28,7 +39,15 @@ export default function Home() {
             <span>Bolsas cerradas y alimento por kilo</span>
           </div>
         </div>
-        <HomeCollections />
+        <Suspense
+          fallback={
+            <div className="home-section" role="status">
+              Cargando catálogo…
+            </div>
+          }
+        >
+          <HomeCollections />
+        </Suspense>
         <section
           className="home-how"
           id="como-comprar"

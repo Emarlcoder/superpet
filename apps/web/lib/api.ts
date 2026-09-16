@@ -1,6 +1,12 @@
 export const API = '/api/v1';
-export type Variant = { key: string; width: number; height: number };
+export type Variant = {
+  key: string;
+  width: number;
+  height: number;
+  url?: string;
+};
 export type Promotion = {
+  imageUrl?: string;
   id: string;
   imageKey: string;
   width: number;
@@ -87,7 +93,15 @@ export function money(value: string) {
     currency: 'UYU',
   }).format(Number(value) / 100);
 }
-export function media(key: string) {
+export function media(key: string, publicUrl?: string) {
+  if (
+    publicUrl &&
+    /^https:\/\/ik\.imagekit\.io\/[a-zA-Z0-9_-]+\/superpet\/public\/ik-[a-f0-9-]+-(320|640|1280)\.webp$/.test(
+      publicUrl,
+    ) &&
+    publicUrl.endsWith('/' + key)
+  )
+    return publicUrl;
   if (key.startsWith('ik-')) return API + '/media/' + encodeURIComponent(key);
   return process.env.NEXT_PUBLIC_MEDIA_URL
     ? process.env.NEXT_PUBLIC_MEDIA_URL + '/' + key

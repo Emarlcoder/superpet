@@ -1,24 +1,18 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { api, media, type Promotion } from '../lib/api';
+import { media, type Promotion } from '../lib/api';
 
-export function PromotionsCarousel() {
-  const [items, setItems] = useState<Promotion[]>([]);
+export function PromotionsCarousel({ items }: { items: Promotion[] }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(true);
   useEffect(() => {
-    const abort = new AbortController();
-    api<Promotion[]>('/promotions', { signal: abort.signal })
-      .then(setItems)
-      .catch(() => {});
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => setReducedMotion(preference.matches);
     update();
     preference.addEventListener('change', update);
     return () => {
-      abort.abort();
       preference.removeEventListener('change', update);
     };
   }, []);
@@ -32,6 +26,16 @@ export function PromotionsCarousel() {
   }, [items.length, paused, hovered, reducedMotion]);
   if (!items.length) return null;
   const current = items[index % items.length]!;
+  const imageSource = media(current.imageKey, current.imageUrl);
+  const imageSources = imageSource.startsWith('https://ik.imagekit.io/')
+    ? [...new Set([480, 768, current.width].filter((w) => w <= current.width))]
+        .sort((a, b) => a - b)
+        .map(
+          (width) =>
+            `${imageSource.replace('/superpet/', `/tr:w-${width}/superpet/`)} ${width}w`,
+        )
+        .join(', ')
+    : undefined;
   const select = (next: number) => {
     setPaused(true);
     setIndex((next + items.length) % items.length);
@@ -53,11 +57,13 @@ export function PromotionsCarousel() {
       >
         <img
           key={current.id}
-          src={media(current.imageKey)}
+          src={imageSource}
+          srcSet={imageSources}
+          sizes="(max-width: 1200px) calc(100vw - 32px), 1168px"
           width={current.width}
           height={current.height}
           alt={`Promoción de SuperPet ${index + 1}`}
-          fetchPriority="high"
+          fetchPriority={index === 0 ? 'high' : 'auto'}
         />
       </div>
       {items.length > 1 && (

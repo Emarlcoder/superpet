@@ -76,41 +76,10 @@ export class CommerceController {
         cursor: z.string().max(2048).optional(),
       })
       .parse(query);
-    let items = (await this.c.catalog()).filter(
-      (p) =>
-        (!q.q ||
-          p.name.toLocaleLowerCase().includes(q.q.toLocaleLowerCase())) &&
-        (!q.species || p.species.includes(q.species)) &&
-        (!q.category || p.categoryId === q.category) &&
-        (!q.brand || p.brandId === q.brand),
-    );
-    if (q.sort?.startsWith('price'))
-      items.sort((a, b) => {
-        const price = (p: typeof a) =>
-          Number(
-            p.skus.find((s) => s.saleUnit === 'unit')?.priceMinor ?? Infinity,
-          );
-        return (
-          (price(a) - price(b)) * (q.sort === 'price_desc' ? -1 : 1) ||
-          a.id.localeCompare(b.id)
-        );
-      });
-    const offset = q.cursor
-      ? Number(Buffer.from(q.cursor, 'base64url').toString())
-      : 0;
-    ensure(Number.isSafeInteger(offset) && offset >= 0, 'INVALID_CURSOR', 422);
-    return {
-      items: items.slice(offset, offset + q.limit),
-      nextCursor:
-        offset + q.limit < items.length
-          ? Buffer.from(String(offset + q.limit)).toString('base64url')
-          : null,
-    };
+    return this.c.catalogPage(q);
   }
   @Get('products/:slug') async product(@Param('slug') slug: string) {
-    const p = (await this.c.catalog()).find((p) => p.slug === slug);
-    ensure(p, 'NOT_FOUND', 404);
-    return p;
+    return this.c.catalogProduct(slug);
   }
   @Get('catalog/filters') async filters() {
     const rows = await this.c.db

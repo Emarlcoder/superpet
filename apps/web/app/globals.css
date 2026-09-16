@@ -56,6 +56,15 @@ a:focus-visible {
   border-radius: 24px;
   background: transparent;
 }
+.promotion-placeholder {
+  aspect-ratio: 12 / 5;
+  margin: 1rem;
+  border-radius: 24px;
+  background: #f3f6f7;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
 .promotion-slide {
   background: #f3f6f7;
   display: flex;
@@ -424,12 +433,14 @@ form {
   margin: 1rem 0;
 }
 .gallery {
+  min-width: 0;
   display: grid;
   gap: 1rem;
   align-content: start;
 }
 .gallery img {
   width: 100%;
+  height: auto;
   max-height: 540px;
   object-fit: contain;
   border-radius: 16px;

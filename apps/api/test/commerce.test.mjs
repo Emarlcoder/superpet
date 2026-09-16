@@ -188,6 +188,124 @@ describe.skipIf(!connectionString)(
       )
         await rm(mediaDir, { recursive: true, force: true });
     });
+    it('filters and paginates in SQL while keeping bag prices, public visibility and detail data', async () => {
+      const [category, brand] = await connection.db
+        .insert(s.taxonomies)
+        .values([
+          { kind: 'category', name: 'Paging', slug: 'paging' },
+          { kind: 'brand', name: 'Paging brand', slug: 'paging-brand' },
+        ])
+        .returning();
+      const products = await connection.db
+        .insert(s.products)
+        .values(
+          ['Alpha 100%_', 'Beta', 'Gamma', 'Hidden', 'Archived'].map(
+            (name, i) => ({
+              name,
+              slug: 'paging-' + i,
+              categoryId: category.id,
+              brandId: i < 2 ? brand.id : null,
+              species: i === 1 ? ['cat'] : ['dog', 'cat'],
+              status: i === 3 ? 'draft' : i === 4 ? 'archived' : 'published',
+            }),
+          ),
+        )
+        .returning();
+      const variants = await connection.db
+        .insert(s.skus)
+        .values(
+          products.flatMap((p, i) => [
+            {
+              productId: p.id,
+              code: 'PAGING-BAG-' + i,
+              label: 'Bolsa',
+              saleUnit: 'unit',
+              priceMinor: BigInt(i === 0 ? 300 : 100),
+            },
+            {
+              productId: p.id,
+              code: 'PAGING-KG-' + i,
+              label: 'Suelto',
+              saleUnit: 'kg',
+              priceMinor: 1n,
+              active: i !== 0,
+            },
+          ]),
+        )
+        .returning();
+      await connection.db.insert(s.stocks).values(
+        variants.map((v) => ({
+          skuId: v.id,
+          quantity: v.saleUnit === 'kg' ? 2800n : 0n,
+        })),
+      );
+      const path = '/products?category=' + category.id;
+      await connection.db.insert(s.images).values({
+        productId: products[0].id,
+        alt: 'Foto de bolsa',
+        position: 0,
+        originalKey: 'private-original',
+        variants: [{ key: 'test-640.webp', width: 640, height: 640 }],
+      });
+      const first = (await request(path + '&limit=2')).body;
+      expect(first.items.map((p) => p.name)).toEqual(['Alpha 100%_', 'Beta']);
+      const second = (
+        await request(path + '&limit=2&cursor=' + first.nextCursor)
+      ).body;
+      expect(second.items.map((p) => p.name)).toEqual(['Gamma']);
+      expect(second.nextCursor).toBeNull();
+      expect(first.items[0].skus).toHaveLength(1);
+      expect(first.items[0].skus[0].maxSelectable).toBe(0);
+      expect(first.items[0].skus[0]).not.toHaveProperty('stock');
+      expect(first.items[0].images[0].alt).toBe('Foto de bolsa');
+      expect(first.items[0].images[0]).not.toHaveProperty('originalKey');
+      expect(first.items[1].images).toEqual([]);
+      expect((await request(path + '&q=100%25_')).body.items).toHaveLength(1);
+      expect((await request(path + '&q=ALPHA')).body.items).toHaveLength(1);
+      expect((await request(path + '&q=%27%20OR%20true--')).body.items).toEqual(
+        [],
+      );
+      expect(
+        (await request(path + '&species=dog&brand=' + brand.id)).body.items.map(
+          (p) => p.id,
+        ),
+      ).toEqual([products[0].id]);
+      const expectedCheap = products
+        .slice(1, 3)
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map((p) => p.id);
+      expect(
+        (await request(path + '&sort=price_asc')).body.items.map((p) => p.id),
+      ).toEqual([...expectedCheap, products[0].id]);
+      expect(
+        (await request(path + '&sort=price_desc')).body.items.map((p) => p.id),
+      ).toEqual([products[0].id, ...expectedCheap]);
+      expect((await request('/products/paging-0')).body).toEqual(
+        first.items[0],
+      );
+      expect((await request('/products/paging-3')).status).toBe(404);
+      expect((await request('/products/paging-4')).status).toBe(404);
+      expect((await request('/products/nonexistent')).status).toBe(404);
+      expect(
+        (
+          await request(
+            path + '&cursor=' + Buffer.from('-1').toString('base64url'),
+          )
+        ).status,
+      ).toBe(422);
+      expect(
+        (
+          await request(
+            path + '&cursor=' + Buffer.from('999').toString('base64url'),
+          )
+        ).body,
+      ).toEqual({ items: [], nextCursor: null });
+      // Keep later invariant tests isolated from this catalog fixture.
+      await connection.db
+        .update(s.products)
+        .set({ status: 'archived' })
+        .where(sql`${s.products.categoryId} = ${category.id}`);
+    });
     it('protects admin routes, rejects foreign origins and rotates the pre-session', async () => {
       expect((await request('/admin/products')).status).toBe(401);
       expect(

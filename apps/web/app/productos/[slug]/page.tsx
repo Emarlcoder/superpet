@@ -1,4 +1,6 @@
-import { ProductDetail, StoreHeader } from '../../../components/storefront';
+import { StoreHeader } from '../../../components/store-header';
+import { ProductDetail } from '../../../components/product-detail';
+
 export default async function Page({
   params,
 }: {

@@ -3,6 +3,7 @@ import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Database, QueryDb, Transaction } from '../db/database.js';
 import * as s from '../db/schema.js';
 import { DomainError, ensure, json } from './errors.js';
+import { publicImageUrl } from './media-url.js';
 import type { Line } from './types.js';
 
 const total = (lines: Line[]) =>
@@ -95,25 +96,118 @@ export class Commerce {
     const row = await this.settings();
     return { ...row.data, version: row.version, operationEpoch: this.epoch };
   }
+  async catalogPage(query: {
+    q?: string | undefined;
+    species?: 'dog' | 'cat' | undefined;
+    category?: string | undefined;
+    brand?: string | undefined;
+    sort?: 'name_asc' | 'price_asc' | 'price_desc' | undefined;
+    limit: number;
+    cursor?: string | undefined;
+  }) {
+    const offset = query.cursor
+      ? Number(Buffer.from(query.cursor, 'base64url').toString())
+      : 0;
+    ensure(Number.isSafeInteger(offset) && offset >= 0, 'INVALID_CURSOR', 422);
+    // A bag/unit defines the displayed price; loose food must not affect sorting.
+    const price = sql`(select ${s.skus.priceMinor} from ${s.skus}
+      inner join ${s.stocks} on ${s.stocks.skuId} = ${s.skus.id}
+      where ${s.skus.productId} = ${s.products.id}
+      and ${s.skus.active} = true and ${s.skus.saleUnit} = 'unit'
+      order by ${s.skus.id} limit 1)`;
+    const rows = await this.db
+      .select()
+      .from(s.products)
+      .where(
+        and(
+          eq(s.products.status, 'published'),
+          query.q
+            ? sql`strpos(lower(${s.products.name}), lower(${query.q})) > 0`
+            : undefined,
+          query.species
+            ? sql`${s.products.species} @> ${JSON.stringify([query.species])}::jsonb`
+            : undefined,
+          query.category
+            ? eq(s.products.categoryId, query.category)
+            : undefined,
+          query.brand ? eq(s.products.brandId, query.brand) : undefined,
+        ),
+      )
+      .orderBy(
+        ...(query.sort === 'price_asc'
+          ? [sql`${price} asc nulls last`, asc(s.products.id)]
+          : query.sort === 'price_desc'
+            ? [sql`${price} desc nulls first`, asc(s.products.id)]
+            : [asc(s.products.name), asc(s.products.id)]),
+      )
+      .limit(query.limit + 1)
+      .offset(offset);
+    return {
+      items: await this.catalogRows(rows.slice(0, query.limit), false),
+      nextCursor:
+        rows.length > query.limit
+          ? Buffer.from(String(offset + query.limit)).toString('base64url')
+          : null,
+    };
+  }
+  async catalogProduct(slug: string) {
+    const rows = await this.db
+      .select()
+      .from(s.products)
+      .where(and(eq(s.products.status, 'published'), eq(s.products.slug, slug)))
+      .limit(1);
+    ensure(rows.length, 'NOT_FOUND', 404);
+    return (await this.catalogRows(rows, false))[0]!;
+  }
   async catalog(admin = false) {
     const rows = await this.db
       .select()
       .from(s.products)
       .where(admin ? undefined : eq(s.products.status, 'published'))
       .orderBy(asc(s.products.name), asc(s.products.id));
-    const variants = await this.db
-      .select({ sku: s.skus, stock: s.stocks })
-      .from(s.skus)
-      .innerJoin(s.stocks, eq(s.skus.id, s.stocks.skuId));
-    const photos = await this.db
-      .select()
-      .from(s.images)
-      .orderBy(asc(s.images.position));
+    return this.catalogRows(rows, admin);
+  }
+  private async catalogRows(
+    rows: Array<typeof s.products.$inferSelect>,
+    admin: boolean,
+  ) {
+    if (!rows.length) return [];
+    const ids = rows.map((p) => p.id);
+    const [variants, photos] = await Promise.all([
+      this.db
+        .select({ sku: s.skus, stock: s.stocks })
+        .from(s.skus)
+        .innerJoin(s.stocks, eq(s.skus.id, s.stocks.skuId))
+        .where(
+          and(
+            inArray(s.skus.productId, ids),
+            admin ? undefined : eq(s.skus.active, true),
+          ),
+        )
+        .orderBy(asc(s.skus.id)),
+      this.db
+        .select({
+          id: s.images.id,
+          productId: s.images.productId,
+          alt: s.images.alt,
+          variants: s.images.variants,
+        })
+        .from(s.images)
+        .where(inArray(s.images.productId, ids))
+        .orderBy(asc(s.images.position), asc(s.images.id)),
+    ]);
     return rows.map((p) => ({
       ...p,
       images: photos
         .filter((i) => i.productId === p.id)
-        .map((i) => ({ id: i.id, alt: i.alt, variants: i.variants })),
+        .map((i) => ({
+          id: i.id,
+          alt: i.alt,
+          variants: i.variants.map((v) => ({
+            ...v,
+            url: publicImageUrl(v.key),
+          })),
+        })),
       skus: variants
         .filter((v) => v.sku.productId === p.id && (admin || v.sku.active))
         .map(({ sku, stock }) => ({

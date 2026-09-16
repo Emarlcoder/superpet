@@ -36,6 +36,7 @@ import * as s from '../db/schema.js';
 import * as v from '../domain/validation.js';
 import type { Transaction } from '../db/database.js';
 import { putImagekit, deleteImagekit, imagekitUrl } from './imagekit.js';
+import { publicImageUrl } from '../domain/media-url.js';
 
 @Injectable()
 export class MediaGuard implements CanActivate {
@@ -137,7 +138,7 @@ export class MediaController {
     }
   }
   @Get('promotions') async publicPromotions() {
-    return this.c.db
+    const items = await this.c.db
       .select({
         id: s.promotions.id,
         imageKey: s.promotions.imageKey,
@@ -147,6 +148,10 @@ export class MediaController {
       .from(s.promotions)
       .where(eq(s.promotions.active, true))
       .orderBy(desc(s.promotions.createdAt), desc(s.promotions.id));
+    return items.map((item) => ({
+      ...item,
+      imageUrl: publicImageUrl(item.imageKey),
+    }));
   }
   @Get('admin/promotions') async listPromotions(@Req() req: Request) {
     await this.auth.session(req);

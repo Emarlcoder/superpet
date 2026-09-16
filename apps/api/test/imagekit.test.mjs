@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { publicImageUrl } from '../dist/domain/media-url.js';
 import {
   putImagekit,
   deleteImagekit,
@@ -16,6 +17,19 @@ afterEach(() => {
 });
 
 describe('ImageKit storage', () => {
+  it('exposes only derivative CDN URLs with a valid public endpoint', () => {
+    expect(publicImageUrl(key + '-1280.webp')).toBe(
+      'https://ik.imagekit.io/test/superpet/public/' + key + '-1280.webp',
+    );
+    expect(publicImageUrl(key + '.original')).toBeUndefined();
+    expect(publicImageUrl('../secret')).toBeUndefined();
+    expect(publicImageUrl('local-1280.webp')).toBeUndefined();
+    vi.stubEnv(
+      'IMAGEKIT_URL_ENDPOINT',
+      'https://user:secret@ik.imagekit.io/test',
+    );
+    expect(publicImageUrl(key + '-1280.webp')).toBeUndefined();
+  });
   it('only serves generated public variants and never originals or arbitrary paths', () => {
     expect(imagekitUrl(key + '-320.webp')).toBe(
       'https://ik.imagekit.io/test/superpet/public/' + key + '-320.webp',

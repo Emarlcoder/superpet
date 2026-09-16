@@ -1,4 +1,6 @@
-import { Catalog, StoreHeader } from '../../components/storefront';
+import { StoreHeader } from '../../components/store-header';
+import { Catalog } from '../../components/catalog';
+
 import { Suspense } from 'react';
 export default function Page() {
   return (

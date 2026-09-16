@@ -1,4 +1,6 @@
-import { Cart, StoreHeader } from '../../components/storefront';
+import { StoreHeader } from '../../components/store-header';
+import { Cart } from '../../components/cart';
+
 export default function Page() {
   return (
     <>
