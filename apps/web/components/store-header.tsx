@@ -26,6 +26,7 @@ export function StoreHeader() {
             width={144}
             height={78}
             priority
+            unoptimized
             className="logo"
           />
         </Link>
